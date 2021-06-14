@@ -14,7 +14,7 @@ int main()
 	ofstream fout("caliberation_result.txt");  /* file for solving the result */
 	
 	//read each frame, extract corners from each frame, find subpixel-accurate positions of the chessboard corners
-	cout << "Starting extract corners………………" << endl;
+	cout << "------Starting extract corners------" << endl;
 	int image_count = 0;  /* number of images */
 	Size image_size;  /* size of images */
 	Size board_size = Size(6, 9);    /* corners of each row & column on checkerborad */
@@ -80,10 +80,10 @@ int main()
 		//cout << " -->" << image_points_seq[ii][0].x << endl; 
 		//cout << " -->" << image_points_seq[ii][0].y << endl;
 	}
-	cout << "Corners extraction is Done！\n" ;
+	cout << "------Corners extraction is Done!------\n" ;
 
 	//Camera Callibration
-	cout << "\nStarting to calibration………………" << endl;
+	cout << "\n------Starting to calibration------" << endl;
 	/*Information of checkerboard*/
 	Size square_size = Size(24, 24);  /* Size of checkerboard (real measured) */
 	vector<vector<Point3f>> object_points; /* Save 3D location of checker board */
@@ -119,14 +119,14 @@ int main()
 	}
 	/* Starting Callibrate */
 	calibrateCamera(object_points, image_points_seq, image_size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, 0);
-	cout << "Callibration is Done！\n" ;
+	cout << "------Callibration is Done!------\n" ;
 	//Evaluate result of calibration
-	cout << "\nStarting evaluate result of callibration………………\n" ;
+	cout << "\n------Starting evaluate result of callibration------\n" ;
 	double total_err = 0.0; /* Sum of pixel difference in all frames */
 	double err = 0.0; /* Average error in each frame */
 	vector<Point2f> image_points2; /* Store measured projected location */
-	cout << "Average callibration error in each frame：\n";
-	fout << "Callibration error in each frame：\n";
+	cout << "Average callibration error in each frame: \n";
+	fout << "Callibration error in each frame: \n";
 	for (i = 0; i < image_count; i++)
 	{
 		vector<Point3f> tempPointSet = object_points[i];
@@ -144,31 +144,31 @@ int main()
 		}
 		err = norm(image_points2Mat, tempImagePointMat, NORM_L2);
 		total_err += err /= point_counts[i];
-		std::cout << "Average error in the " << i + 1 << "-th image：" << err << " pixel" << endl;
-		fout << "Average error in the " << i + 1 << "-th image：" << err << " pixel" << endl;
+		std::cout << "Average error in the " << i + 1 << "-th image: " << err << " pixel" << endl;
+		fout << "Average error in the " << i + 1 << "-th image: " << err << " pixel" << endl;
 	}
-	std::cout << "Sum of average error：" << total_err / image_count << " pixel" << endl;
-	fout << "Sum of average error：" << total_err / image_count << " pixel" << endl;
-	std::cout << "Evaluation is done！" << endl;
+	std::cout << "Sum of average error: " << total_err / image_count << " pixel" << endl;
+	fout << "Sum of average error: " << total_err / image_count << " pixel" << endl;
+	std::cout << "------Evaluation is done!------" << endl;
 	//保存定标结果  	
-	std::cout << "\nStarting store the results………………" << endl;
+	std::cout << "\n------Starting store the results------" << endl;
 	Mat rotation_matrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* Store rotation matrix for each frame */
-	fout << "Intrinsic matrix for the camers：" << endl;
+	fout << "Intrinsic matrix for the camers: " << endl;
 	fout << cameraMatrix << endl << endl;
-	fout << "Distortion parameters：\n";
+	fout << "Distortion parameters: \n";
 	fout << distCoeffs << endl << endl << endl;
 	for (int i = 0; i < image_count; i++)
 	{
-		fout << "Rotation vector of the " << i + 1 << "-th image：" << endl;
+		fout << "Rotation vector of the " << i + 1 << "-th image: " << endl;
 		fout << tvecsMat[i] << endl;
 		/* change roration vector into rotation matrix */
 		Rodrigues(tvecsMat[i], rotation_matrix);
-		fout << "Rotation matrix of the " << i + 1 << "-th image：" << endl;
+		fout << "Rotation matrix of the " << i + 1 << "-th image: " << endl;
 		fout << rotation_matrix << endl;
-		fout << "Rotation matrix of the " << i + 1 << "-th image：" << endl;
+		fout << "Rotation matrix of the " << i + 1 << "-th image: " << endl;
 		fout << rvecsMat[i] << endl << endl;
 	}
-	std::cout << "Saving is Done" << endl;
+	std::cout << "------Saving is Done!------" << endl;
 	fout << endl;
 	system("pause");
 	return 0;
