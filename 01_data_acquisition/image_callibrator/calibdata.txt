@@ -1,0 +1,5 @@
+chess1.bmp
+chess2.bmp
+chess3.bmp
+chess4.bmp
+chess5.bmp
