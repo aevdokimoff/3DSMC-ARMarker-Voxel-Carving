@@ -8,13 +8,13 @@
 using namespace cv;
 using namespace std;
 
-void main()
+int main()
 {
 	ifstream fin("calibdata.txt"); /* in this file, image names are stored */
 	ofstream fout("caliberation_result.txt");  /* file for solving the result */
 	
 	//read each frame, extract corners from each frame, find subpixel-accurate positions of the chessboard corners
-	cout << "Starting extract corners°≠°≠°≠°≠°≠°≠" << endl;
+	cout << "Starting extract corners‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶" << endl;
 	int image_count = 0;  /* number of images */
 	Size image_size;  /* size of images */
 	Size board_size = Size(6, 9);    /* corners of each row & column on checkerborad */
@@ -80,17 +80,17 @@ void main()
 		//cout << " -->" << image_points_seq[ii][0].x << endl; 
 		//cout << " -->" << image_points_seq[ii][0].y << endl;
 	}
-	cout << "Corners extraction is Done£°\n" ;
+	cout << "Corners extraction is DoneÔºÅ\n" ;
 
 	//Camera Callibration
-	cout << "\nStarting to calibration°≠°≠°≠°≠°≠°≠" << endl;
+	cout << "\nStarting to calibration‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶" << endl;
 	/*Information of checkerboard*/
-	Size square_size = Size(25, 25);  /* Size of checkerboard (real measured) */
+	Size square_size = Size(24, 24);  /* Size of checkerboard (real measured) */
 	vector<vector<Point3f>> object_points; /* Save 3D location of checker board */
-	/*ƒ⁄Õ‚≤Œ ˝*/
+	/*ÂÜÖÂ§ñÂèÇÊï∞*/
 	Mat cameraMatrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* Intrinsic Paramerters of camera */
 	vector<int> point_counts;  // number of corners in each frame
-	Mat distCoeffs = Mat(1, 5, CV_32FC1, Scalar::all(0)); /* Distrotion parameters of camers£∫k1,k2,p1,p2,k3 */
+	Mat distCoeffs = Mat(1, 5, CV_32FC1, Scalar::all(0)); /* Distrotion parameters of camersÔºök1,k2,p1,p2,k3 */
 	vector<Mat> tvecsMat;  /* rotation of each frame */
 	vector<Mat> rvecsMat; /* translation of each frame */
 	/* inialize 3D location of corners on checkerboard */
@@ -119,14 +119,14 @@ void main()
 	}
 	/* Starting Callibrate */
 	calibrateCamera(object_points, image_points_seq, image_size, cameraMatrix, distCoeffs, rvecsMat, tvecsMat, 0);
-	cout << "Callibration is Done£°\n" ;
+	cout << "Callibration is DoneÔºÅ\n" ;
 	//Evaluate result of calibration
-	cout << "\nStarting evaluate result of callibration°≠°≠°≠°≠°≠°≠\n" ;
+	cout << "\nStarting evaluate result of callibration‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶\n" ;
 	double total_err = 0.0; /* Sum of pixel difference in all frames */
 	double err = 0.0; /* Average error in each frame */
 	vector<Point2f> image_points2; /* Store measured projected location */
-	cout << "Average callibration error in each frame£∫\n";
-	fout << "Callibration error in each frame£∫\n";
+	cout << "Average callibration error in each frameÔºö\n";
+	fout << "Callibration error in each frameÔºö\n";
 	for (i = 0; i < image_count; i++)
 	{
 		vector<Point3f> tempPointSet = object_points[i];
@@ -144,32 +144,32 @@ void main()
 		}
 		err = norm(image_points2Mat, tempImagePointMat, NORM_L2);
 		total_err += err /= point_counts[i];
-		std::cout << "Average error in the " << i + 1 << "-th image£∫" << err << " pixel" << endl;
-		fout << "Average error in the " << i + 1 << "-th image£∫" << err << " pixel" << endl;
+		std::cout << "Average error in the " << i + 1 << "-th imageÔºö" << err << " pixel" << endl;
+		fout << "Average error in the " << i + 1 << "-th imageÔºö" << err << " pixel" << endl;
 	}
-	std::cout << "Sum of average error£∫" << total_err / image_count << " pixel" << endl;
-	fout << "Sum of average error£∫" << total_err / image_count << " pixel" << endl;
-	std::cout << "Evaluation is done£°" << endl;
-	//±£¥Ê∂®±ÍΩ·π˚  	
-	std::cout << "\nStarting store the results°≠°≠°≠°≠°≠°≠" << endl;
+	std::cout << "Sum of average errorÔºö" << total_err / image_count << " pixel" << endl;
+	fout << "Sum of average errorÔºö" << total_err / image_count << " pixel" << endl;
+	std::cout << "Evaluation is doneÔºÅ" << endl;
+	//‰øùÂ≠òÂÆöÊ†áÁªìÊûú  	
+	std::cout << "\nStarting store the results‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶‚Ä¶" << endl;
 	Mat rotation_matrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* Store rotation matrix for each frame */
-	fout << "Intrinsic matrix for the camers£∫" << endl;
+	fout << "Intrinsic matrix for the camersÔºö" << endl;
 	fout << cameraMatrix << endl << endl;
-	fout << "Distortion parameters£∫\n";
+	fout << "Distortion parametersÔºö\n";
 	fout << distCoeffs << endl << endl << endl;
 	for (int i = 0; i < image_count; i++)
 	{
-		fout << "Rotation vector of the " << i + 1 << "-th image£∫" << endl;
+		fout << "Rotation vector of the " << i + 1 << "-th imageÔºö" << endl;
 		fout << tvecsMat[i] << endl;
 		/* change roration vector into rotation matrix */
 		Rodrigues(tvecsMat[i], rotation_matrix);
-		fout << "Rotation matrix of the " << i + 1 << "-th image£∫" << endl;
+		fout << "Rotation matrix of the " << i + 1 << "-th imageÔºö" << endl;
 		fout << rotation_matrix << endl;
-		fout << "Rotation matrix of the " << i + 1 << "-th image£∫" << endl;
+		fout << "Rotation matrix of the " << i + 1 << "-th imageÔºö" << endl;
 		fout << rvecsMat[i] << endl << endl;
 	}
 	std::cout << "Saving is Done" << endl;
 	fout << endl;
 	system("pause");
-	return;
+	return 0;
 }
