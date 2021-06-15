@@ -87,7 +87,7 @@ int main()
 	/*Information of checkerboard*/
 	Size square_size = Size(24, 24);  /* Size of checkerboard (real measured) */
 	vector<vector<Point3f>> object_points; /* Save 3D location of checker board */
-	/*内外参数*/
+	/*intrinsic & extrinsic parameters*/
 	Mat cameraMatrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* Intrinsic Paramerters of camera */
 	vector<int> point_counts;  // number of corners in each frame
 	Mat distCoeffs = Mat(1, 5, CV_32FC1, Scalar::all(0)); /* Distrotion parameters of camers：k1,k2,p1,p2,k3 */
@@ -150,7 +150,7 @@ int main()
 	std::cout << "Sum of average error: " << total_err / image_count << " pixel" << endl;
 	fout << "Sum of average error: " << total_err / image_count << " pixel" << endl;
 	std::cout << "------Evaluation is done!------" << endl;
-	//保存定标结果  	
+	//store result 	
 	std::cout << "\n------Starting store the results------" << endl;
 	Mat rotation_matrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* Store rotation matrix for each frame */
 	fout << "Intrinsic matrix for the camers: " << endl;
