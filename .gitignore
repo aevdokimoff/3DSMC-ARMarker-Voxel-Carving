@@ -32,9 +32,13 @@
 *.app
 
 generate_scale
+voxel
+
 *.aux
 *.log
 
+*.png
+*.PNG
 *.JPG
 *.jpg
 *.dng
