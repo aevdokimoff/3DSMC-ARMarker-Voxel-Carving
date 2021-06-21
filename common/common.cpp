@@ -1,52 +1,5 @@
-typedef float  f32;
-typedef double f64;
-typedef uint8_t    u8;
-typedef uint16_t  u16;
-typedef uint32_t  u32;
-typedef uint64_t  u64;
-typedef int8_t     s8;
-typedef int16_t   s16;
-typedef int32_t   s32;
-typedef int64_t   s64;
-
-struct v3 {
-    f32 x;
-    f32 y;
-    f32 z;
-};
-
-struct v4 {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-};
-
-union mat4x4 {
-    struct {
-        f32 values[16];
-    };
-    union {
-        f32 cols[4];
-        v4  v;
-    } rows[4];
-};
-
-union mat3x3 {
-    struct {
-        f32 values[9];
-    };
-    union {
-        f32 cols[3];
-        v3  v;
-    } rows[3];
-};
-
-
-struct Voxel {
-    v3 position;
-    f32 value;
-};
+#include <common.h>
+#include "common.h"
 
 v3 operator-(v3 a, v3 b) {
     return {
@@ -127,7 +80,7 @@ v3 normalize(v3 v) {
 }
 
 v3 cross(v3 b, v3 c) {
-    v3 result;
+    v3 result{};
 
     result.x = b.y*c.z - c.y*b.z;
     result.y = c.x*b.z - b.x*c.z;

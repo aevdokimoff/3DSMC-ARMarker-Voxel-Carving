@@ -52,7 +52,7 @@
 #else
 #include <map>
 #endif
-#include <math.h>
+#include <common.h>
 #include <stddef.h>
 
 #include "dynamic_bitset.h"

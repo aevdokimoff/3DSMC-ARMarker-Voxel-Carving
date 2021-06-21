@@ -1,15 +1,9 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <common.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
-
-#include "math.cpp"
 
 #define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
 

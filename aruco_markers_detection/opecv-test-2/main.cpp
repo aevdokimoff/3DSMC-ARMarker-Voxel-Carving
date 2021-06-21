@@ -1,6 +1,6 @@
-#include<opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
-#include<iostream>
+#include <iostream>
 
 using namespace cv;
 using namespace std;
