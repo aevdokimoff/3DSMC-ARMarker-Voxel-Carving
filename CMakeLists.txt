@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 find_package(OpenCV REQUIRED)
 set(LIBRARIES  ${OpenCV_LIBS})
 
-set(COMMON_SOURCES common/common.cpp)
+set(COMMON_SOURCES common/common.cpp common/Volume.cpp)
 include_directories(common)
 
 add_executable(image_calibrator 01_data_acquisition/image_callibrator/main.cpp)
