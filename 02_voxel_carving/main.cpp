@@ -3,6 +3,8 @@
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
+#include <common.h>
+
 #define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
 
 struct Pixel {
