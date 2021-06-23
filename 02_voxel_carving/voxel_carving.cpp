@@ -226,7 +226,7 @@ void print(Point_Cloud pc) {
 }
 
 void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 projection_mat,
-                            u32* progress_report, bool output_result_image = false)
+                            bool carve_in_parallel, bool output_result_image = false)
 {
     char file_path[1024];
     sprintf(file_path, "%s/cam_info.txt", run_path);
@@ -246,13 +246,13 @@ void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 project
     x_dist /= 100;
     z_dist /= 100;
 
-    // printf("read dists: x %f z %f\n", x_dist, z_dist);
+    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
-    for (int degrees = 0; degrees < 360; degrees += 10) {
-        *progress_report = degrees;
-        
-        printf("\r Run 1: %03d deg    Run 2: %03d deg", degree_progress_run_1, degree_progress_run_2);
-        fflush(stdout);
+#pragma omp parallel for num_threads(thread_count)
+    for (int degrees = 0; degrees < 36; degrees ++) {
+        degrees *= 10;
+
+        printf("\r %03d deg", degrees);
 
         mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
 
@@ -272,24 +272,19 @@ Point_Cloud voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool
 
     Point_Cloud pc = generate_point_cloud(res, side_length);
 
-    mat4x4 proj_mat = perspectiveRH_ZO(0.3503711, 1.509804, 0.3, 200);
+    f32 y_fov = 0.3503711;
+    f32 aspect = 1.509804;
+    mat4x4 proj_mat = perspectiveRH_ZO(y_fov, aspect, 0.3, 200);
 
     u32 num_threads = (carve_in_parallel) ? 2 : 1;
 
     printf("Progress in runs:\n");
 
-    
-    // NOTE(Felix): carve both runs in parallel
-#pragma omp parallel for num_threads(num_threads)
-    for (int i = 0; i < 2; ++i) {
-        if (i == 0) {
-            sprintf(file_path1, "%s/run_1", path_to_runs);
-            carve_using_single_run(pc, file_path1, proj_mat, &degree_progress_run_1);
-        } else {
-            sprintf(file_path2, "%s/run_2", path_to_runs);
-            carve_using_single_run(pc, file_path2, proj_mat, &degree_progress_run_2);
-        }
-    }
+    sprintf(file_path1, "%s/run_1", path_to_runs);
+    carve_using_single_run(pc, file_path1, proj_mat, carve_in_parallel);
+
+    sprintf(file_path2, "%s/run_2", path_to_runs);
+    carve_using_single_run(pc, file_path2, proj_mat, carve_in_parallel);
 
     return pc;
 }
