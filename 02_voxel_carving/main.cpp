@@ -1,5 +1,3 @@
-#include <common.h>
-
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../3rd_party_libs/stb/stb_image.h"

@@ -1,4 +1,4 @@
-#include "Volume.h"
+#include "volume.h"
 
 //! Initializes an empty volume dataset.
 Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint dx_, uint dy_, uint dz_, uint dim)
