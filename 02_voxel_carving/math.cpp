@@ -1,19 +1,3 @@
-typedef float  f32;
-typedef double f64;
-typedef uint8_t    u8;
-typedef uint16_t  u16;
-typedef uint32_t  u32;
-typedef uint64_t  u64;
-typedef int8_t     s8;
-typedef int16_t   s16;
-typedef int32_t   s32;
-typedef int64_t   s64;
-
-struct v3 {
-    f32 x;
-    f32 y;
-    f32 z;
-};
 
 struct v4 {
     f32 x;
@@ -42,11 +26,6 @@ union mat3x3 {
     } rows[3];
 };
 
-
-struct Voxel {
-    v3 position;
-    f32 value;
-};
 
 v3 operator-(v3 a, v3 b) {
     return {
@@ -134,4 +113,65 @@ v3 cross(v3 b, v3 c) {
     result.z = b.x*c.y - c.x*b.y;
 
     return result;
+}
+
+
+mat4x4 generate_identitiy_4x4() {
+    mat4x4 mat;
+    memset(&mat, 0, sizeof(mat));
+    mat.rows[0].v.x = 1;
+    mat.rows[1].v.y = 1;
+    mat.rows[2].v.z = 1;
+    mat.rows[3].v.w = 1;
+
+    return mat;
+}
+
+mat3x3 generate_z_rot_mat(f32 angle) {
+    mat3x3 mat;
+    memset(&mat, 0, sizeof(mat));
+
+    mat.rows[0].cols[0] =  cos(angle);
+    mat.rows[0].cols[1] = -sin(angle);
+    mat.rows[1].cols[0] =  sin(angle);
+    mat.rows[1].cols[1] =  cos(angle);
+
+    mat.rows[2].cols[2] = 1;
+
+    return mat;
+
+}
+
+
+mat4x4 to_4x4(mat3x3 m) {
+    mat4x4 result;
+    memset(&result, 0, sizeof(result));
+
+    result.rows[0].cols[0] = m.rows[0].cols[0];
+    result.rows[0].cols[1] = m.rows[0].cols[1];
+    result.rows[0].cols[2] = m.rows[0].cols[2];
+
+    result.rows[1].cols[0] = m.rows[1].cols[0];
+    result.rows[1].cols[1] = m.rows[1].cols[1];
+    result.rows[1].cols[2] = m.rows[1].cols[2];
+
+    result.rows[2].cols[0] = m.rows[2].cols[0];
+    result.rows[2].cols[1] = m.rows[2].cols[1];
+    result.rows[2].cols[2] = m.rows[2].cols[2];
+
+    result.rows[3].cols[3] = 1;
+
+    return result;
+}
+
+v4 to_v4(v3 v) {
+    return {
+        v.x, v.y, v.z, 1
+    };
+}
+
+v3 to_v3(v4 v) {
+    return {
+        v.x, v.y, v.z
+    };
 }

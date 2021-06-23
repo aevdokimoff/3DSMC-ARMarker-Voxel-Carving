@@ -3,15 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <omp.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
+#include "voxel_carving.hpp"
 #include "math.cpp"
 
 #define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
+#define IDX2D(x,y, res)   ((y*res)+x)
 
 struct Pixel {
     u8 r;
@@ -19,8 +22,15 @@ struct Pixel {
     u8 b;
 };
 
-Voxel* generate_voxel_grid(u32 resolution, f32 side_length) {
-    Voxel* voxels = (Voxel*)malloc(resolution*resolution*resolution*sizeof(voxels[0]));
+u32 degree_progress_run_1 = 0;
+u32 degree_progress_run_2 = 0;
+
+Point_Cloud generate_point_cloud(u32 resolution, f32 side_length) {
+    Point_Cloud pc {
+        .resolution = resolution,
+        .side_length = side_length,
+        .voxels = (Voxel*)malloc(resolution*resolution*resolution*sizeof(Voxel))
+    };
 
     u32 index = 0;
     for (u32 z = 0; z < resolution; ++z) {
@@ -30,8 +40,8 @@ Voxel* generate_voxel_grid(u32 resolution, f32 side_length) {
         }
         for (u32 y = 0; y < resolution; ++y) {
             for (u32 x = 0; x < resolution; ++x) {
-                voxels[index].value = 1.0f;
-                voxels[index].position = {
+                pc.voxels[index].value = 1.0f;
+                pc.voxels[index].position = {
                     .x = x * 1.0f / (resolution-1) * side_length - (side_length / 2),
                     .y = y * 1.0f / (resolution-1) * side_length - (side_length / 2),
                     .z = z * 1.0f / (resolution-1) * side_length,
@@ -43,18 +53,7 @@ Voxel* generate_voxel_grid(u32 resolution, f32 side_length) {
     }
     printf("\n");
 
-    return voxels;
-}
-
-mat4x4 generate_identitiy_4x4() {
-    mat4x4 mat;
-    memset(&mat, 0, sizeof(mat));
-    mat.rows[0].v.x = 1;
-    mat.rows[1].v.y = 1;
-    mat.rows[2].v.z = 1;
-    mat.rows[3].v.w = 1;
-
-    return mat;
+    return pc;
 }
 
 mat4x4 generate_look_at_mat(v3 eye, v3 center, v3 up) {
@@ -95,21 +94,6 @@ mat4x4 perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
     return Result;
 }
 
-mat3x3 generate_z_rot_mat(f32 angle) {
-    mat3x3 mat;
-    memset(&mat, 0, sizeof(mat));
-
-    mat.rows[0].cols[0] =  cos(angle);
-    mat.rows[0].cols[1] = -sin(angle);
-    mat.rows[1].cols[0] =  sin(angle);
-    mat.rows[1].cols[1] =  cos(angle);
-
-    mat.rows[2].cols[2] = 1;
-
-    return mat;
-
-}
-
 mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
     obj_rotation = -obj_rotation * M_PI / 180.0f;
     v3 eye    {offset_horiz, 0, offset_vert};
@@ -123,124 +107,38 @@ mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotatio
     return generate_look_at_mat(eye, center, up);
 }
 
-mat4x4 to_4x4(mat3x3 m) {
-    mat4x4 result;
-    memset(&result, 0, sizeof(result));
-
-    result.rows[0].cols[0] = m.rows[0].cols[0];
-    result.rows[0].cols[1] = m.rows[0].cols[1];
-    result.rows[0].cols[2] = m.rows[0].cols[2];
-
-    result.rows[1].cols[0] = m.rows[1].cols[0];
-    result.rows[1].cols[1] = m.rows[1].cols[1];
-    result.rows[1].cols[2] = m.rows[1].cols[2];
-
-    result.rows[2].cols[0] = m.rows[2].cols[0];
-    result.rows[2].cols[1] = m.rows[2].cols[1];
-    result.rows[2].cols[2] = m.rows[2].cols[2];
-
-    result.rows[3].cols[3] = 1;
-
-    return result;
-}
-
-v4 to_v4(v3 v) {
-    return {
-        v.x, v.y, v.z, 1
-    };
-}
-
-v3 to_v3(v4 v) {
-    return {
-        v.x, v.y, v.z
-    };
-}
-
-
 v3 project_voxel_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
 
-    v4 our_intrinsic[3];
+    v4 our_intrinsic[3]; // 3x4
     our_intrinsic[0] = {intrinsic.rows[0].cols[0], 0, 0, 0};
     our_intrinsic[1] = {0, intrinsic.rows[1].cols[1], 0, 0};
     our_intrinsic[2] = {0, 0, 1, 0};
 
-    v4 our_temp[3];
-    our_temp[0] = 
-          { dot(our_intrinsic[0], 
-                 {extrinsic.rows[0].cols[0],
-                  extrinsic.rows[1].cols[0],
-                  extrinsic.rows[2].cols[0],
-                  extrinsic.rows[3].cols[0]}),
-            dot(our_intrinsic[0], 
-                 {extrinsic.rows[0].cols[1],
-                  extrinsic.rows[1].cols[1],
-                  extrinsic.rows[2].cols[1],
-                  extrinsic.rows[3].cols[1]}),
-            dot(our_intrinsic[0], 
-                 {extrinsic.rows[0].cols[2],
-                  extrinsic.rows[1].cols[2],
-                  extrinsic.rows[2].cols[2],
-                  extrinsic.rows[3].cols[2]}),
-            dot(our_intrinsic[0], 
-                 {extrinsic.rows[0].cols[3],
-                  extrinsic.rows[1].cols[3],
-                  extrinsic.rows[2].cols[3],
-                  extrinsic.rows[3].cols[3]}),
-          };
-    our_temp[1] = 
-          { dot(our_intrinsic[1], 
-                 {extrinsic.rows[0].cols[0],
-                  extrinsic.rows[1].cols[0],
-                  extrinsic.rows[2].cols[0],
-                  extrinsic.rows[3].cols[0]}),
-            dot(our_intrinsic[1], 
-                 {extrinsic.rows[0].cols[1],
-                  extrinsic.rows[1].cols[1],
-                  extrinsic.rows[2].cols[1],
-                  extrinsic.rows[3].cols[1]}),
-            dot(our_intrinsic[1], 
-                 {extrinsic.rows[0].cols[2],
-                  extrinsic.rows[1].cols[2],
-                  extrinsic.rows[2].cols[2],
-                  extrinsic.rows[3].cols[2]}),
-            dot(our_intrinsic[1], 
-                 {extrinsic.rows[0].cols[3],
-                  extrinsic.rows[1].cols[3],
-                  extrinsic.rows[2].cols[3],
-                  extrinsic.rows[3].cols[3]}),
-          };
-    our_temp[2] = 
-          { dot(our_intrinsic[2], 
-                 {extrinsic.rows[0].cols[0],
-                  extrinsic.rows[1].cols[0],
-                  extrinsic.rows[2].cols[0],
-                  extrinsic.rows[3].cols[0]}),
-            dot(our_intrinsic[2], 
-                 {extrinsic.rows[0].cols[1],
-                  extrinsic.rows[1].cols[1],
-                  extrinsic.rows[2].cols[1],
-                  extrinsic.rows[3].cols[1]}),
-            dot(our_intrinsic[2], 
-                 {extrinsic.rows[0].cols[2],
-                  extrinsic.rows[1].cols[2],
-                  extrinsic.rows[2].cols[2],
-                  extrinsic.rows[3].cols[2]}),
-            dot(our_intrinsic[2], 
-                 {extrinsic.rows[0].cols[3],
-                  extrinsic.rows[1].cols[3],
-                  extrinsic.rows[2].cols[3],
-                  extrinsic.rows[3].cols[3]}),
-          };
+    v4 our_temp[3]; //[3x4]  = our_intrinsic * extrinsic
+    our_temp[0] = {
+        our_intrinsic[0].x * extrinsic.rows[0].cols[0],
+        our_intrinsic[0].x * extrinsic.rows[0].cols[1],
+        our_intrinsic[0].x * extrinsic.rows[0].cols[2],
+        our_intrinsic[0].x * extrinsic.rows[0].cols[3],
+    };
+    our_temp[1] = {
+        our_intrinsic[1].y * extrinsic.rows[1].cols[0],
+        our_intrinsic[1].y * extrinsic.rows[1].cols[1],
+        our_intrinsic[1].y * extrinsic.rows[1].cols[2],
+        our_intrinsic[1].y * extrinsic.rows[1].cols[3],
+    };
+    our_temp[2] = {
+        extrinsic.rows[2].cols[0],
+        extrinsic.rows[2].cols[1],
+        extrinsic.rows[2].cols[2],
+        extrinsic.rows[2].cols[3],
+    };
 
-    v3 intermediate = 
-       // to_v3(
-          // intrinsic * 
-          // (extrinsic * to_v4(pos));
-       // );
-    {
-        dot(our_temp[0], to_v4(pos)),
-        dot(our_temp[1], to_v4(pos)),
-        dot(our_temp[2], to_v4(pos))
+    v4 pos_v4 = to_v4(pos);
+    v3 intermediate = { // [3x1] = our_tmp (3x4) * pos (4x1)
+        dot(our_temp[0], pos_v4),
+        dot(our_temp[1], pos_v4),
+        dot(our_temp[2], pos_v4)
     };
     
     
@@ -257,71 +155,148 @@ void print(mat4x4 m) {
     printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[3].cols[0], m.rows[3].cols[1], m.rows[3].cols[2], m.rows[3].cols[3]);
 }
 
-
-int main(int argc, char *argv[]) {
-    u32 res = 3;
-    f32 sl = 0.098;
-
-    Voxel* voxels = generate_voxel_grid(res, sl);
-
-    for (u32 z = 0; z < res; ++z) {
-        for (u32 y = 0; y < res; ++y) {
-            for (u32 x = 0; x < res; ++x) {
-                Voxel v = voxels[IDX3D(x,y,z, res)];
-                printf("Voxel: % 3.2f % 3.2f % 3.2f\n",
-                       v.position.x,
-                       v.position.y,
-                       v.position.z);                
-            }
-        }
+void carve_using_singe_image(Point_Cloud pc, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+    int image_width, image_height;
+    int n;
+    Pixel* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
+    if (!pixels) {
+        fprintf(stderr, "Error opening image: %s\n", image_path);
+        return;
     }
 
-    mat4x4 extrinsic = generate_extrinsic_mat(0.62, 0.57, 0);
-    print(extrinsic);
+    Pixel* output_pixels;
+    if (output_result_image) {
+        output_pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
+    }
 
-
-    int image_width = 11;
-    int image_height = 12;
-    int n;
-    Pixel* pixels = (Pixel*)stbi_load("marker.jpg", &image_width, &image_height, &n, 0);
-
-    f32 aspect = 1.0f * image_width / image_height;
-    printf("image size: %d %d\n", image_width, image_height);
-
-    mat4x4 intrinsic = perspectiveRH_ZO(0.3503711, aspect, 0.3, 200);
-    print(intrinsic);
-
-
-    for (u32 z = 0; z < res; ++z) {
-        for (u32 y = 0; y < res; ++y) {
-            for (u32 x = 0; x < res; ++x) {
-                Voxel v = voxels[IDX3D(x,y,z, res)];
-                v3 p = project_voxel_to_screen_space(v.position, extrinsic, intrinsic);
-
-                // printf("Projected Voxel: % 3.2f % 3.2f % 3.2f\n",
-                //        p.x,  p.y,  p.z);
+    for (u32 z = 0; z < pc.resolution; ++z) {
+        for (u32 y = 0; y < pc.resolution; ++y) {
+            for (u32 x = 0; x < pc.resolution; ++x) {
+                Voxel* v = &(pc.voxels[IDX3D(x,y,z, pc.resolution)]);
+                v3 p = project_voxel_to_screen_space(v->position, view_mat, proj_mat);
 
                 int p_x = (p.x + 1.0f) / 2.0f * image_width;
                 int p_y = (p.y + 1.0f) / 2.0f * image_height;
 
-                // printf("image spce coords: %d %d\n", p_x, p_y);
 
-                int thickness = 10;
+                bool outside = pixels[IDX2D(p_x, p_y, image_width)].r < 150;
+                if (outside) {
+                    v->value = 0;
+                }
 
-                for (int j = p_y - thickness/2; j < p_y+thickness/2; ++j) {
-                    for (int i = p_x - thickness/2; i < p_x+thickness/2; ++i) {
-                        if (j >= 0 && j < image_height && i >= 0 && i < image_width) {
-                            pixels[j * image_width + i].r = 255;
-                            pixels[j * image_width + i].g = 0;                        
-                            pixels[j * image_width + i].b = 255;    
-                        }                        
+                if (output_result_image) {
+                    int thickness = 1;
+                    static const Pixel green {   0, 255, 0 };
+                    static const Pixel red   { 255,   0, 0 };
+
+                    for (int j = p_y - thickness/2; j <= p_y+thickness/2; ++j) {
+                        for (int i = p_x - thickness/2; i <= p_x+thickness/2; ++i) {
+                            if (j >= 0 && j < image_height && i >= 0 && i < image_width) {
+                                if (outside) {
+                                    output_pixels[j * image_width + i] = red;
+                                } else {
+                                    output_pixels[j * image_width + i] = green;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    stbi_write_png("marker_yes.png", image_width, image_height, 3, pixels, 0);
+    if (output_result_image) {
+        char file_name[1024];
+        sprintf(file_name, "%s_carved.png", image_path);
+        stbi_write_png(file_name, image_width, image_height, 3, output_pixels, 0);
+    }
 
+}
+
+void print(Point_Cloud pc) {
+    for (u32 z = 0; z < pc.resolution; ++z) {
+        for (u32 y = 0; y < pc.resolution; ++y) {
+            for (u32 x = 0; x < pc.resolution; ++x) {
+                Voxel v = pc.voxels[IDX3D(x,y,z, pc.resolution)];
+                printf("Voxel: % 3.2f % 3.2f % 3.2f\n",
+                       v.position.x,
+                       v.position.y,
+                       v.position.z);
+            }
+        }
+    }
+}
+
+void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 projection_mat,
+                            u32* progress_report, bool output_result_image = false)
+{
+    char file_path[1024];
+    sprintf(file_path, "%s/cam_info.txt", run_path);
+
+    f32 x_dist;
+    f32 z_dist;
+
+    FILE* conf_file = fopen(file_path, "r");
+    if (!conf_file) {
+        fprintf(stderr, "The cam info file was not found in %s.\n", file_path);
+        return;
+    }
+    fscanf(conf_file, "x_dist = %f cm\n", &x_dist);
+    fscanf(conf_file, "z_dist = %f cm\n", &z_dist);
+    fclose(conf_file);
+
+    x_dist /= 100;
+    z_dist /= 100;
+
+    // printf("read dists: x %f z %f\n", x_dist, z_dist);
+
+    for (int degrees = 0; degrees < 360; degrees += 10) {
+        *progress_report = degrees;
+        
+        printf("\r Run 1: %03d deg    Run 2: %03d deg", degree_progress_run_1, degree_progress_run_2);
+        fflush(stdout);
+
+        mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
+
+        sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
+        carve_using_singe_image(pc, file_path,
+                                view_mat, projection_mat, output_result_image);
+
+
+    }
+    printf("\rDone processing run %s\n", run_path);
+}
+
+
+Point_Cloud voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
+    static char file_path1[1024];
+    static char file_path2[1024];
+
+    Point_Cloud pc = generate_point_cloud(res, side_length);
+
+    mat4x4 proj_mat = perspectiveRH_ZO(0.3503711, 1.509804, 0.3, 200);
+
+    u32 num_threads = (carve_in_parallel) ? 2 : 1;
+
+    printf("Progress in runs:\n");
+
+    
+    // NOTE(Felix): carve both runs in parallel
+#pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < 2; ++i) {
+        if (i == 0) {
+            sprintf(file_path1, "%s/run_1", path_to_runs);
+            carve_using_single_run(pc, file_path1, proj_mat, &degree_progress_run_1);
+        } else {
+            sprintf(file_path2, "%s/run_2", path_to_runs);
+            carve_using_single_run(pc, file_path2, proj_mat, &degree_progress_run_2);
+        }
+    }
+
+    return pc;
+}
+
+int main(int argc, char *argv[]) {
+    voxel_carve(100, 0.10, "/home/felix/Dokumente/alskdjlaskdj/", true);
     return 0;
 }
