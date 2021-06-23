@@ -1,31 +1,5 @@
-
-struct v4 {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
-};
-
-union mat4x4 {
-    struct {
-        f32 values[16];
-    };
-    union {
-        f32 cols[4];
-        v4  v;
-    } rows[4];
-};
-
-union mat3x3 {
-    struct {
-        f32 values[9];
-    };
-    union {
-        f32 cols[3];
-        v3  v;
-    } rows[3];
-};
-
+#include "common.h"
+#include "string.h"
 
 v3 operator-(v3 a, v3 b) {
     return {
@@ -106,7 +80,7 @@ v3 normalize(v3 v) {
 }
 
 v3 cross(v3 b, v3 c) {
-    v3 result;
+    v3 result{};
 
     result.x = b.y*c.z - c.y*b.z;
     result.y = c.x*b.z - b.x*c.z;
@@ -114,7 +88,6 @@ v3 cross(v3 b, v3 c) {
 
     return result;
 }
-
 
 mat4x4 generate_identitiy_4x4() {
     mat4x4 mat;
@@ -142,36 +115,8 @@ mat3x3 generate_z_rot_mat(f32 angle) {
 
 }
 
-
-mat4x4 to_4x4(mat3x3 m) {
-    mat4x4 result;
-    memset(&result, 0, sizeof(result));
-
-    result.rows[0].cols[0] = m.rows[0].cols[0];
-    result.rows[0].cols[1] = m.rows[0].cols[1];
-    result.rows[0].cols[2] = m.rows[0].cols[2];
-
-    result.rows[1].cols[0] = m.rows[1].cols[0];
-    result.rows[1].cols[1] = m.rows[1].cols[1];
-    result.rows[1].cols[2] = m.rows[1].cols[2];
-
-    result.rows[2].cols[0] = m.rows[2].cols[0];
-    result.rows[2].cols[1] = m.rows[2].cols[1];
-    result.rows[2].cols[2] = m.rows[2].cols[2];
-
-    result.rows[3].cols[3] = 1;
-
-    return result;
-}
-
 v4 to_v4(v3 v) {
     return {
         v.x, v.y, v.z, 1
-    };
-}
-
-v3 to_v3(v4 v) {
-    return {
-        v.x, v.y, v.z
     };
 }

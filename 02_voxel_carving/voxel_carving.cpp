@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +10,6 @@
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "voxel_carving.hpp"
-#include "math.cpp"
 
 #define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
 #define IDX2D(x,y, res)   ((y*res)+x)
