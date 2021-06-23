@@ -28,7 +28,6 @@
 		AC2F1064262EF25A0082C429 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		AC2F1079262EF6E10082C429 /* opecv-test-2.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "opecv-test-2.entitlements"; sourceTree = "<group>"; };
 		ACD143F62638120E00FE8FCC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		ACD144052638160300FE8FCC /* test.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = test.cpp; sourceTree = "<group>"; };
 		ACD144072638174700FE8FCC /* MarkerMovie.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = MarkerMovie.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -66,7 +65,6 @@
 				ACD144072638174700FE8FCC /* MarkerMovie.mp4 */,
 				AC2F1064262EF25A0082C429 /* main.cpp */,
 				AC279F95267F8FBC00A5F158 /* calibration_params.yml */,
-				ACD144052638160300FE8FCC /* test.cpp */,
 				ACD143F62638120E00FE8FCC /* Info.plist */,
 			);
 			path = "opecv-test-2";
