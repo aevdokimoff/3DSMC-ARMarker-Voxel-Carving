@@ -1,6 +1,24 @@
 #include "marching_cubes.h"
 
-bool SimpleMarchingCubes::processVolume(Volume* vol, int x, int y, int z, double iso, SimpleMesh* mesh)
+bool MarchingCubes::processVolume(double iso, SimpleMesh* mesh)
+{
+    for (int x = 0; x < vol->getDimX() - 1; x++)
+    {
+        for (int y = 0; y < vol->getDimY() - 1; y++)
+        {
+            for (int z = 0; z < vol->getDimZ() - 1; z++)
+            {
+                processVolumeCell(x, y, z, iso, mesh);
+            }
+        }
+    }
+
+    return true;
+}
+
+SimpleMarchingCubes::SimpleMarchingCubes(Volume *_vol) : MarchingCubes(_vol) {}
+
+bool SimpleMarchingCubes::processVolumeCell(int x, int y, int z, double iso, SimpleMesh* mesh)
 {
     MC_Gridcell cell;
     Vec3d tmp;

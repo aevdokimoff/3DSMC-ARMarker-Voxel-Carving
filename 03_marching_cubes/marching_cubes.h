@@ -9,9 +9,9 @@
 using namespace cv;
 
 struct MC_Triangle {
-    Vec3d p[3];
+    Vec3d p[3]{};
 
-    MC_Triangle() {}
+    MC_Triangle() = default;
 
     MC_Triangle(Vec3d _p[3]) {
         std::copy(_p, _p + 3, p);
@@ -19,10 +19,10 @@ struct MC_Triangle {
 };
 
 struct MC_Gridcell {
-    Vec3d p[8];
-    double val[8];
+    Vec3d p[8]{};
+    double val[8]{};
 
-    MC_Gridcell() {}
+    MC_Gridcell() = default;
 
     MC_Gridcell(Vec3d _p[8], double _val[8]) {
         std::copy(_p, _p + 8, p);
@@ -33,7 +33,9 @@ struct MC_Gridcell {
 class MarchingCubes
 {
 public:
-    virtual bool processVolume(Volume* vol, int x, int y, int z, double iso, SimpleMesh* mesh) = 0;
+    explicit MarchingCubes(Volume *_vol) : vol(_vol) {}
+
+    bool processVolume(double isolevel, SimpleMesh* mesh);
 protected:
     int edgeTable[256] = {
             0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
@@ -328,18 +330,23 @@ protected:
             { 0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
             { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
     };
-private:
-    virtual Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) = 0;
+
+    Volume* vol;
+//private:
+    virtual bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) = 0;
     virtual int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) = 0;
+    virtual Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) = 0;
 };
 
-class SimpleMarchingCubes : MarchingCubes
+class SimpleMarchingCubes : public MarchingCubes
 {
 public:
-    bool processVolume(Volume* vol, int x, int y, int z, double iso, SimpleMesh* mesh) override;
-private:
-    Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) override;
+    explicit SimpleMarchingCubes(Volume *_vol);
+//private:
+protected:
+    bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) override;
     int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) override;
+    Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) override;
 };
 
 #endif
