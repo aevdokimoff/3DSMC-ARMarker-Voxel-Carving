@@ -76,4 +76,10 @@ v3 normalize(v3 v);
 
 v3 cross(v3 b, v3 c);
 
+mat4x4 generate_identity_4x4();
+
+mat3x3 generate_z_rot_mat(f32 angle);
+
+v4 to_v4(v3 v);
+
 #endif

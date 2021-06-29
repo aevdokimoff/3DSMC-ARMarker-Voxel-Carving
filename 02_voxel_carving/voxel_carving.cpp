@@ -59,7 +59,7 @@ mat4x4 generate_look_at_mat(v3 eye, v3 center, v3 up) {
     v3 s = normalize(cross(f, up));
     v3 u = cross(s, f);
 
-    mat4x4 result = generate_identitiy_4x4();
+    mat4x4 result = generate_identity_4x4();
     result.rows[0].cols[0] = s.x;
     result.rows[0].cols[1] = s.y;
     result.rows[0].cols[2] = s.z;

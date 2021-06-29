@@ -1,5 +1,5 @@
 #pragma once
-#include "../common/common.cpp"
+#include "../common/common.h"
 
 struct Point_Cloud {
     u32 resolution;

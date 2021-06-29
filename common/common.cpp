@@ -1,5 +1,5 @@
 #include "common.h"
-#include "string.h"
+#include <cstring>
 
 v3 operator-(v3 a, v3 b) {
     return {
@@ -89,7 +89,7 @@ v3 cross(v3 b, v3 c) {
     return result;
 }
 
-mat4x4 generate_identitiy_4x4() {
+mat4x4 generate_identity_4x4() {
     mat4x4 mat;
     memset(&mat, 0, sizeof(mat));
     mat.rows[0].v.x = 1;
