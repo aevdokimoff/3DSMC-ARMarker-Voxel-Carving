@@ -10,22 +10,22 @@ int main(int argc, char *argv[]) {
     std::string outputFile = "test_torus.off";
 
     unsigned int resolution = 50;
-    Volume vol(Vec3d(-0.1,-0.1,-0.1), Vec3d(1.1,1.1,1.1), resolution, resolution, resolution, 1);
-    for (int x = 0; x < vol.getDimX(); x++)
+    Volume volume(Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
+    for (int x = 0; x < volume.getDimX(); x++)
     {
-        for (int y = 0; y < vol.getDimY(); y++)
+        for (int y = 0; y < volume.getDimY(); y++)
         {
-            for (int z = 0; z < vol.getDimZ(); z++)
+            for (int z = 0; z < volume.getDimZ(); z++)
             {
-                Vec3d p = vol.pos(x, y, z);
+                Vec3d p = volume.pos(x, y, z);
                 double val = surface->Eval(p);
-                vol.set(x,y,z, val);
+                volume.set(x, y, z, val);
             }
         }
     }
 
     SimpleMesh mesh;
-    SimpleMarchingCubes marchingCubes(&vol);
+    SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(0.0f, &mesh);
 
     if (!mesh.writeMesh(outputFile))

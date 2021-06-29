@@ -1,18 +1,15 @@
 #include "volume.h"
+#include <cmath>
 
-//! Initializes an empty volume dataset.
-Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint dx_, uint dy_, uint dz_, uint dim)
+Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
 {
-	min = min_;
-	max = max_;
-	diag = max - min;
-	dx = dx_;
-	dy = dy_;
-	dz = dz_;
-	m_dim = dim;
-	vol = nullptr;
-
-	vol = new double[dx*dy*dz];
+    v_min = min_;
+    v_max = max_;
+	diag = v_max - v_min;
+	dx = resolution;
+	dy = resolution;
+	dz = resolution;
+	vol = new double[dx * dy * dz];
 
 	compute_ddx_dddx();
 }
@@ -30,9 +27,9 @@ void Volume::compute_ddx_dddx()
 	ddy = 1.0f / (dy - 1);
 	ddz = 1.0f / (dz - 1);
 
-	dddx = (max[0] - min[0]) / (dx - 1);
-	dddy = (max[1] - min[1]) / (dy - 1);
-	dddz = (max[2] - min[2]) / (dz - 1);
+	dddx = (v_max[0] - v_min[0]) / (dx - 1);
+	dddy = (v_max[1] - v_min[1]) / (dy - 1);
+	dddz = (v_max[2] - v_min[2]) / (dz - 1);
 
 	if (dz == 1)
 	{
@@ -40,7 +37,7 @@ void Volume::compute_ddx_dddx()
 		dddz = 0;
 	}
 
-	diag = max - min;
+	diag = v_max - v_min;
 }
 
 //! Returns the Data.
@@ -52,19 +49,33 @@ double* Volume::getData() const
 //! Sets all entries in the volume to '0'
 void Volume::clean()
 {
-	for (uint i1 = 0; i1 < dx*dy*dz; i1++) vol[i1] = double(0.0);
+	for (uint i1 = 0; i1 < dx * dy * dz; i1++) vol[i1] = double(0.0);
 }
 
 //! Sets minimum extension
-void Volume::SetMin(Vec3d min_)
+void Volume::SetMin(const Vec3d& min_)
 {
-	min = min_;
-	diag = max - min;
+    v_min = min_;
+	diag = v_max - v_min;
 }
 
 //! Sets maximum extension
-void Volume::SetMax(Vec3d max_)
+void Volume::SetMax(const Vec3d& max_)
 {
-	max = max_;
-	diag = max - min;
+    v_max = max_;
+	diag = v_max - v_min;
+}
+
+void print(const Volume& volume) {
+    for (u32 z = 0; z < volume.dz; ++z) {
+        for (u32 y = 0; y < volume.dy; ++y) {
+            for (u32 x = 0; x < volume.dx; ++x) {
+                Vec3d position = volume.pos(x, y, z);
+                printf("Voxel: % 3.2f % 3.2f % 3.2f\n",
+                       position[0],
+                       position[1],
+                       position[2]);
+            }
+        }
+    }
 }

@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <opencv2/core/mat.hpp>
 
 typedef float  f32;
 typedef double f64;
@@ -19,6 +20,18 @@ struct v3 {
     f32 x;
     f32 y;
     f32 z;
+
+    v3() = default;
+
+    v3(f32 _x, f32 _y, f32 _z) : x(_x), y(_y), z(_z) {}
+
+    explicit v3(cv::Vec3d _vector) {
+        x = _vector[0];
+        y = _vector[1];
+        z = _vector[2];
+    }
+
+    cv::Vec3d toVec3d();
 };
 
 struct v4 {
@@ -26,6 +39,19 @@ struct v4 {
     f32 y;
     f32 z;
     f32 w;
+
+    v4() = default;
+
+    v4(f32 _x, f32 _y, f32 _z, f32 _w) : x(_x), y(_y), z(_z), w(_w) {}
+
+    explicit v4(cv::Vec4d _vector) {
+        x = _vector[0];
+        y = _vector[1];
+        z = _vector[2];
+        w = _vector[3];
+    }
+
+    cv::Vec4d toVec4d();
 };
 
 union mat4x4 {
@@ -36,6 +62,8 @@ union mat4x4 {
         f32 cols[4];
         v4  v;
     } rows[4];
+
+    mat4x4() = default;
 };
 
 union mat3x3 {
@@ -46,12 +74,6 @@ union mat3x3 {
         f32 cols[3];
         v3  v;
     } rows[3];
-};
-
-
-struct Voxel {
-    v3 position;
-    f32 value;
 };
 
 v3 operator-(v3 a, v3 b);

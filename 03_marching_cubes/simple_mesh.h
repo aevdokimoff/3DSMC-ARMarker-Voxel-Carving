@@ -1,4 +1,3 @@
-
 #ifndef SIMPLE_MESH_H
 #define SIMPLE_MESH_H
 

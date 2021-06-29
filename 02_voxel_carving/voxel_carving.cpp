@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <omp.h>
@@ -23,35 +22,14 @@ struct Pixel {
 u32 degree_progress_run_1 = 0;
 u32 degree_progress_run_2 = 0;
 
-Point_Cloud generate_point_cloud(u32 resolution, f32 side_length) {
-    Point_Cloud pc {
-        .resolution = resolution,
-        .side_length = side_length,
-        .voxels = (Voxel*)malloc(resolution*resolution*resolution*sizeof(Voxel))
-    };
+Volume generate_point_cloud(u32 resolution, f32 side_length) {
+    Volume volume(
+            cv::Vec3d(-side_length / 2, -side_length / 2, 0),
+            cv::Vec3d(side_length / 2, side_length / 2, side_length),
+            resolution);
+    std::fill(volume.vol, volume.vol + (uint) pow(resolution, 3), 1.);
 
-    u32 index = 0;
-    for (u32 z = 0; z < resolution; ++z) {
-        if (z % 32 == 0) {
-            printf("\rGenerating: %.1f%%", z * 1.0f / (resolution-1) * 100);
-            fflush(stdout);
-        }
-        for (u32 y = 0; y < resolution; ++y) {
-            for (u32 x = 0; x < resolution; ++x) {
-                pc.voxels[index].value = 1.0f;
-                pc.voxels[index].position = {
-                    .x = x * 1.0f / (resolution-1) * side_length - (side_length / 2),
-                    .y = y * 1.0f / (resolution-1) * side_length - (side_length / 2),
-                    .z = z * 1.0f / (resolution-1) * side_length,
-                };
-
-                ++index;
-            }
-        }
-    }
-    printf("\n");
-
-    return pc;
+    return volume;
 }
 
 mat4x4 generate_look_at_mat(v3 eye, v3 center, v3 up) {
@@ -81,15 +59,15 @@ mat4x4 perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
 
     f32 const tanHalfFovy = tan(fovy / 2.0f);
 
-    mat4x4 Result;
-    memset(&Result, 0, sizeof(Result));
+    mat4x4 result;
+    memset(&result, 0, sizeof(result));
 
-    Result.rows[0].cols[0] = 1.0 / (aspect * tanHalfFovy);
-    Result.rows[1].cols[1] = 1.0 / (tanHalfFovy);
-    Result.rows[2].cols[2] = zFar / (zNear - zFar);
-    Result.rows[3].cols[2] = -1.0;
-    Result.rows[2].cols[3] = -(zFar * zNear) / (zFar - zNear);
-    return Result;
+    result.rows[0].cols[0] = 1.0 / (aspect * tanHalfFovy);
+    result.rows[1].cols[1] = 1.0 / (tanHalfFovy);
+    result.rows[2].cols[2] = zFar / (zNear - zFar);
+    result.rows[3].cols[2] = -1.0;
+    result.rows[2].cols[3] = -(zFar * zNear) / (zFar - zNear);
+    return result;
 }
 
 mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
@@ -153,7 +131,7 @@ void print(mat4x4 m) {
     printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[3].cols[0], m.rows[3].cols[1], m.rows[3].cols[2], m.rows[3].cols[3]);
 }
 
-void carve_using_singe_image(Point_Cloud pc, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
     int image_width, image_height;
     int n;
     Pixel* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
@@ -167,11 +145,10 @@ void carve_using_singe_image(Point_Cloud pc, const char* image_path, mat4x4 view
         output_pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
     }
 
-    for (u32 z = 0; z < pc.resolution; ++z) {
-        for (u32 y = 0; y < pc.resolution; ++y) {
-            for (u32 x = 0; x < pc.resolution; ++x) {
-                Voxel* v = &(pc.voxels[IDX3D(x,y,z, pc.resolution)]);
-                v3 p = project_voxel_to_screen_space(v->position, view_mat, proj_mat);
+    for (int z = 0; z < volume.dz; ++z) {
+        for (int y = 0; y < volume.dy; ++y) {
+            for (int x = 0; x < volume.dx; ++x) {
+                v3 p = project_voxel_to_screen_space(v3(volume.pos(x, y, z)), view_mat, proj_mat);
 
                 int p_x = (p.x + 1.0f) / 2.0f * image_width;
                 int p_y = (p.y + 1.0f) / 2.0f * image_height;
@@ -179,7 +156,7 @@ void carve_using_singe_image(Point_Cloud pc, const char* image_path, mat4x4 view
 
                 bool outside = pixels[IDX2D(p_x, p_y, image_width)].r < 150;
                 if (outside) {
-                    v->value = 0;
+                    volume.set(x, y, z, 0);
                 }
 
                 if (output_result_image) {
@@ -211,21 +188,7 @@ void carve_using_singe_image(Point_Cloud pc, const char* image_path, mat4x4 view
 
 }
 
-void print(Point_Cloud pc) {
-    for (u32 z = 0; z < pc.resolution; ++z) {
-        for (u32 y = 0; y < pc.resolution; ++y) {
-            for (u32 x = 0; x < pc.resolution; ++x) {
-                Voxel v = pc.voxels[IDX3D(x,y,z, pc.resolution)];
-                printf("Voxel: % 3.2f % 3.2f % 3.2f\n",
-                       v.position.x,
-                       v.position.y,
-                       v.position.z);
-            }
-        }
-    }
-}
-
-void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 projection_mat,
+void carve_using_single_run(const Volume& volume, const char* run_path, mat4x4 projection_mat,
                             bool carve_in_parallel, bool output_result_image = false)
 {
     char file_path[1024];
@@ -257,7 +220,7 @@ void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 project
         mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
 
         sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
-        carve_using_singe_image(pc, file_path,
+        carve_using_singe_image(volume, file_path,
                                 view_mat, projection_mat, output_result_image);
 
 
@@ -266,11 +229,11 @@ void carve_using_single_run(Point_Cloud pc, const char* run_path, mat4x4 project
 }
 
 
-Point_Cloud voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
+Volume voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
     static char file_path1[1024];
     static char file_path2[1024];
 
-    Point_Cloud pc = generate_point_cloud(res, side_length);
+    Volume volume = generate_point_cloud(res, side_length);
 
     f32 y_fov = 0.3503711;
     f32 aspect = 1.509804;
@@ -281,12 +244,12 @@ Point_Cloud voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool
     printf("Progress in runs:\n");
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(pc, file_path1, proj_mat, carve_in_parallel);
+    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(pc, file_path2, proj_mat, carve_in_parallel);
+    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel);
 
-    return pc;
+    return volume;
 }
 
 int main(int argc, char *argv[]) {

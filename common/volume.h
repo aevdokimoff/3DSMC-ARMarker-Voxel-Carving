@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <opencv2/core/mat.hpp>
+#include "common.h"
 
 typedef unsigned int uint;
 
@@ -14,7 +15,7 @@ class Volume
 public:
 
 	//! Initializes an empty volume dataset.
-	Volume(const Vec3d& min_, const Vec3d& max_, uint dx_ = 10, uint dy_ = 10, uint dz_ = 10, uint dim = 1);
+	Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
 
 	~Volume();
 
@@ -47,7 +48,13 @@ public:
 	//! Set the value at (x_, y_, z_).
 	inline void set(uint x_, uint y_, uint z_, double val)
 	{
-		vol[getPosFromTuple(x_, y_, z_)] = val;
+        if (val > maxValue)
+            maxValue = val;
+
+        if (val < minValue)
+            minValue = val;
+
+        vol[getPosFromTuple(x_, y_, z_)] = val;
 	};
 
 	//! Get the value at (x_, y_, z_).
@@ -71,19 +78,19 @@ public:
 	//! Returns the cartesian x-coordinates of node (i,..).
 	inline double posX(int i) const
 	{
-		return min[0] + diag[0] * (double(i)*ddx);
+		return v_min[0] + diag[0] * (double(i) * ddx);
 	}
 
 	//! Returns the cartesian y-coordinates of node (..,i,..).
 	inline double posY(int i) const
 	{
-		return min[1] + diag[1] * (double(i)*ddy);
+		return v_min[1] + diag[1] * (double(i) * ddy);
 	}
 
 	//! Returns the cartesian z-coordinates of node (..,i).
 	inline double posZ(int i) const
 	{
-		return min[2] + diag[2] * (double(i)*ddz);
+		return v_min[2] + diag[2] * (double(i) * ddz);
 	}
 
 	//! Returns the cartesian coordinates of node (i,j,k).
@@ -107,14 +114,14 @@ public:
 	//! Returns number of cells in z-dir.
 	inline uint getDimZ() const { return dz; }
 
-	inline Vec3d getMin() { return min; }
-	inline Vec3d getMax() { return max; }
+	inline Vec3d getMin() { return v_min; }
+	inline Vec3d getMax() { return v_max; }
 
 	//! Sets minimum extension
-	void SetMin(Vec3d min_);
+	void SetMin(const Vec3d& min_);
 
 	//! Sets maximum extension
-	void SetMax(Vec3d max_);
+	void SetMax(const Vec3d& max_);
 
 	inline uint getPosFromTuple(int x, int y, int z) const
 	{
@@ -123,7 +130,7 @@ public:
 
 
 	//! Lower left and Upper right corner.
-	Vec3d min, max;
+	Vec3d v_min, v_max;
 
 	//! max-min
 	Vec3d diag;
@@ -137,9 +144,6 @@ public:
 	double* vol;
 
 	double maxValue, minValue;
-
-	uint m_dim;
-
 private:
 
 	//! x,y,z access to vol*
@@ -148,5 +152,7 @@ private:
 		return vol[getPosFromTuple(x, y, z)];
 	}
 };
+
+void print(const Volume& volume);
 
 #endif
