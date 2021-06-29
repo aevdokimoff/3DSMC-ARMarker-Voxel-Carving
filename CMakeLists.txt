@@ -3,12 +3,14 @@ project(3DSMC_ARMarker_Voxel_Carving)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
+add_compile_options(-DOpenCV_DIR=3rd_party_libs/opencv3.4/include)
+
 find_package(OpenCV REQUIRED)
 set(LIBRARIES  ${OpenCV_LIBS})
 
 set(COMMON_SOURCES common/common.cpp common/volume.cpp)
 include_directories(common)
-set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
 
 add_executable(image_calibrator 01_data_acquisition/image_callibrator/main.cpp)
 add_executable(linear_scale_generator 01_data_acquisition/linear_scale_generator/main.cpp)
