@@ -9,15 +9,10 @@ Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
 	dx = resolution;
 	dy = resolution;
 	dz = resolution;
-	vol = new double[dx * dy * dz];
+	vol = std::vector<double>(dx * dy * dz);
 
 	compute_ddx_dddx();
 }
-
-Volume::~Volume()
-{
-	delete[] vol;
-};
 
 
 //! Computes spacing in x,y,z-directions.
@@ -39,12 +34,6 @@ void Volume::compute_ddx_dddx()
 
 	diag = v_max - v_min;
 }
-
-//! Returns the Data.
-double* Volume::getData() const
-{
-	return vol;
-};
 
 //! Sets all entries in the volume to '0'
 void Volume::clean()

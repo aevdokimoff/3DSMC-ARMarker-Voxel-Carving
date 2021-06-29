@@ -4,6 +4,7 @@
 #include <limits>
 #include <opencv2/core/mat.hpp>
 #include "common.h"
+#include <vector>
 
 typedef unsigned int uint;
 
@@ -13,11 +14,7 @@ using namespace cv;
 class Volume
 {
 public:
-
-	//! Initializes an empty volume dataset.
-	Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
-
-	~Volume();
+    Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
 
 	inline void computeMinMaxValues(double& minVal, double& maxVal) const
 	{
@@ -99,9 +96,6 @@ public:
 		return Vec3d(posX(i), posY(j), posZ(k));
 	}
 
-	//! Returns the Data.
-	double* getData() const;
-
 	//! Sets all entries in the volume to '0'
 	void clean();
 
@@ -141,12 +135,12 @@ public:
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
 
-	double* vol;
+	std::vector<double> vol;
 
 	double maxValue, minValue;
 private:
 
-	//! x,y,z access to vol*
+	//! x,y,z access to vol
 	inline double vol_access(int x, int y, int z) const
 	{
 		return vol[getPosFromTuple(x, y, z)];

@@ -104,4 +104,6 @@ mat3x3 generate_z_rot_mat(f32 angle);
 
 v4 to_v4(v3 v);
 
+void print(mat4x4 m);
+
 #endif

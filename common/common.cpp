@@ -126,3 +126,10 @@ v4 to_v4(v3 v) {
         v.x, v.y, v.z, 1
     };
 }
+
+void print(mat4x4 m) {
+    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[0].cols[0], m.rows[0].cols[1], m.rows[0].cols[2], m.rows[0].cols[3]);
+    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[1].cols[0], m.rows[1].cols[1], m.rows[1].cols[2], m.rows[1].cols[3]);
+    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[2].cols[0], m.rows[2].cols[1], m.rows[2].cols[2], m.rows[2].cols[3]);
+    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[3].cols[0], m.rows[3].cols[1], m.rows[3].cols[2], m.rows[3].cols[3]);
+}

@@ -27,8 +27,7 @@ Volume generate_point_cloud(u32 resolution, f32 side_length) {
             cv::Vec3d(-side_length / 2, -side_length / 2, 0),
             cv::Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
-    std::fill(volume.vol, volume.vol + (uint) pow(resolution, 3), 1.);
-
+    std::fill(volume.vol.begin(), volume.vol.end(), 1.);
     return volume;
 }
 
@@ -124,14 +123,7 @@ v3 project_voxel_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
 
 }
 
-void print(mat4x4 m) {
-    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[0].cols[0], m.rows[0].cols[1], m.rows[0].cols[2], m.rows[0].cols[3]);
-    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[1].cols[0], m.rows[1].cols[1], m.rows[1].cols[2], m.rows[1].cols[3]);
-    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[2].cols[0], m.rows[2].cols[1], m.rows[2].cols[2], m.rows[2].cols[3]);
-    printf(" % 5.3f % 5.3f % 5.3f % 5.3f\n", m.rows[3].cols[0], m.rows[3].cols[1], m.rows[3].cols[2], m.rows[3].cols[3]);
-}
-
-void carve_using_singe_image(Volume volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
     int image_width, image_height;
     int n;
     Pixel* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
@@ -145,10 +137,10 @@ void carve_using_singe_image(Volume volume, const char* image_path, mat4x4 view_
         output_pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
     }
 
-    for (int z = 0; z < volume.dz; ++z) {
-        for (int y = 0; y < volume.dy; ++y) {
-            for (int x = 0; x < volume.dx; ++x) {
-                v3 p = project_voxel_to_screen_space(v3(volume.pos(x, y, z)), view_mat, proj_mat);
+    for (int z = 0; z < volume->dz; ++z) {
+        for (int y = 0; y < volume->dy; ++y) {
+            for (int x = 0; x < volume->dx; ++x) {
+                v3 p = project_voxel_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
 
                 int p_x = (p.x + 1.0f) / 2.0f * image_width;
                 int p_y = (p.y + 1.0f) / 2.0f * image_height;
@@ -156,7 +148,7 @@ void carve_using_singe_image(Volume volume, const char* image_path, mat4x4 view_
 
                 bool outside = pixels[IDX2D(p_x, p_y, image_width)].r < 150;
                 if (outside) {
-                    volume.set(x, y, z, 0);
+                    volume->set(x, y, z, 0);
                 }
 
                 if (output_result_image) {
@@ -185,10 +177,9 @@ void carve_using_singe_image(Volume volume, const char* image_path, mat4x4 view_
         sprintf(file_name, "%s_carved.png", image_path);
         stbi_write_png(file_name, image_width, image_height, 3, output_pixels, 0);
     }
-
 }
 
-void carve_using_single_run(const Volume& volume, const char* run_path, mat4x4 projection_mat,
+void carve_using_single_run(Volume *volume, const char* run_path, mat4x4 projection_mat,
                             bool carve_in_parallel, bool output_result_image = false)
 {
     char file_path[1024];
@@ -229,11 +220,9 @@ void carve_using_single_run(const Volume& volume, const char* run_path, mat4x4 p
 }
 
 
-Volume voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
+void voxel_carve(Volume *volume, u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
     static char file_path1[1024];
     static char file_path2[1024];
-
-    Volume volume = generate_point_cloud(res, side_length);
 
     f32 y_fov = 0.3503711;
     f32 aspect = 1.509804;
@@ -244,15 +233,18 @@ Volume voxel_carve(u32 res, f32 side_length, const char* path_to_runs, bool carv
     printf("Progress in runs:\n");
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel);
+    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, true);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel);
+    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, true);
 
-    return volume;
+    delete volume;
 }
 
 int main(int argc, char *argv[]) {
-    voxel_carve(100, 0.10, "/home/felix/Dokumente/alskdjlaskdj/", true);
+    u32 resolution = 100;
+    f32 sideLength = 0.1;
+    Volume volume = generate_point_cloud(resolution, sideLength);
+    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_owl", false);
     return 0;
 }
