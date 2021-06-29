@@ -82,7 +82,7 @@ mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotatio
     return generate_look_at_mat(eye, center, up);
 }
 
-v3 project_voxel_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
+v3 project_point_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
 
     v4 our_intrinsic[3]; // 3x4
     our_intrinsic[0] = {intrinsic.rows[0].cols[0], 0, 0, 0};
@@ -140,7 +140,7 @@ void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
-                v3 p = project_voxel_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
+                v3 p = project_point_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
 
                 int p_x = (p.x + 1.0f) / 2.0f * image_width;
                 int p_y = (p.y + 1.0f) / 2.0f * image_height;
@@ -233,10 +233,10 @@ void voxel_carve(Volume *volume, u32 res, f32 side_length, const char* path_to_r
     printf("Progress in runs:\n");
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, true);
+    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, false);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, true);
+    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, false);
 
     delete volume;
 }
@@ -245,6 +245,6 @@ int main(int argc, char *argv[]) {
     u32 resolution = 100;
     f32 sideLength = 0.1;
     Volume volume = generate_point_cloud(resolution, sideLength);
-    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_owl", false);
+    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_owl", true);
     return 0;
 }
