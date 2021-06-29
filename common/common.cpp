@@ -1,5 +1,5 @@
-#include <common.h>
 #include "common.h"
+#include "string.h"
 
 v3 operator-(v3 a, v3 b) {
     return {
@@ -80,11 +80,43 @@ v3 normalize(v3 v) {
 }
 
 v3 cross(v3 b, v3 c) {
-    v3 result{};
+    v3 result;
 
     result.x = b.y*c.z - c.y*b.z;
     result.y = c.x*b.z - b.x*c.z;
     result.z = b.x*c.y - c.x*b.y;
 
     return result;
+}
+
+mat4x4 generate_identitiy_4x4() {
+    mat4x4 mat;
+    memset(&mat, 0, sizeof(mat));
+    mat.rows[0].v.x = 1;
+    mat.rows[1].v.y = 1;
+    mat.rows[2].v.z = 1;
+    mat.rows[3].v.w = 1;
+
+    return mat;
+}
+
+mat3x3 generate_z_rot_mat(f32 angle) {
+    mat3x3 mat;
+    memset(&mat, 0, sizeof(mat));
+
+    mat.rows[0].cols[0] =  cos(angle);
+    mat.rows[0].cols[1] = -sin(angle);
+    mat.rows[1].cols[0] =  sin(angle);
+    mat.rows[1].cols[1] =  cos(angle);
+
+    mat.rows[2].cols[2] = 1;
+
+    return mat;
+
+}
+
+v4 to_v4(v3 v) {
+    return {
+        v.x, v.y, v.z, 1
+    };
 }
