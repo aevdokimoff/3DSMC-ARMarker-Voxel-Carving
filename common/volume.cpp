@@ -2,11 +2,10 @@
 #include <cmath>
 
 template <typename T>
-Volume<T>::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
+Volume<T>::Volume(double _sideLength, const Vec3d& min_, const Vec3d& max_, uint resolution) :
+    sideLength(sideLength), v_min(min_), v_max(max_)
 {
-    v_min = min_;
-    v_max = max_;
-	diag = v_max - v_min;
+    diag = v_max - v_min;
 	dx = resolution;
 	dy = resolution;
 	dz = resolution;

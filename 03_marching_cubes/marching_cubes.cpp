@@ -119,25 +119,25 @@ void ProjectedMarchingCubes::polygonise(TriangulatedCell &cell)
     //      linear regression, compute segment
     //      intersect segment with border (for one vertex select the further point)
 
-    int cubeindex = 0;
+    int cubeIndex = 0;
     int degree = 1;
     for (bool value : cell.values) {
-        if (!value) cubeindex |= degree;
+        if (!value) cubeIndex |= degree;
         degree <<= 1;
     }
     /* Cube is entirely in/out of the surface */
-    if (edgeTable[cubeindex] == 0) return;
+    if (edgeTable[cubeIndex] == 0) return;
 
     degree = 1;
     for (auto & intersection : cell.intersections) {
-        if (edgeTable[cubeindex] & degree) intersection = true;
+        if (edgeTable[cubeIndex] & degree) intersection = true;
         degree <<= 1;
     }
 
     processImages(cell, dataPath + "/run_1");
     processImages(cell, dataPath + "/run_2");
 
-    //todo
+    //todo compute lines
 }
 
 void ProjectedMarchingCubes::processImages(TriangulatedCell &cell, const string& path)
@@ -178,15 +178,49 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
     }
 
     //
-    for (int i  = 0; i < 6; i++) {
-        for (int x = leftBottomCornerX; x <= rightUpperCornerX; x++) {
-            for (int y = leftBottomCornerY; y <= rightUpperCornerY; y++) {
-                Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
+    for (int i  = 0; i < 6; i++)
+    {
+        for (int x = leftBottomCornerX; x <= rightUpperCornerX; x++)
+        {
+            for (int y = leftBottomCornerY; y <= rightUpperCornerY; y++)
+            {
+                if (pixels[IDX2D(x, y, width)].r >= 150) continue;
 
-                //todo intersect ith side with preimage
+                Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
+                Vec3d screenPos(2.0f * (float) x / (float) width - 1, 2.0f * (float) y / (float) height - 1, 1);
+                Vec3d rayVector = project_screen_point_to_3d(screenPos, viewMatrix, projectionMatrix);
+
+                Vec3d planePoint(cell.corners[faces[i][0]]);
+                Vec3d planeNormal = normalize(
+                        (cell.corners[faces[i][1]] - planePoint)
+                        .cross(cell.corners[faces[i][2]] - planePoint));
+
+                Vec3d diff = cameraPos - planePoint;
+                double prod1 = diff.dot(planeNormal);
+                double prod2 = rayVector.dot(planeNormal);
+                Vec3d intersection = cameraPos - rayVector * prod1 / prod2;
+
+                if (isPointInsideSquare(cell, i, intersection))
+                {
+                    cell.sideIntersections[i].push_back(intersection);
+                }
             }
         }
     }
+}
+
+double computeArea(const Vec3d &p1, const Vec3d &p2, const Vec3d &p3)
+{
+    return (p2 - p1).dot(p3 - p1);
+}
+
+bool ProjectedMarchingCubes::isPointInsideSquare(TriangulatedCell &cell, int face, const Vec3d &point)
+{
+    double area = 0;
+    for (int i = 0; i < 4; i++) {
+        area += computeArea(point, cell.corners[faces[face][i]], cell.corners[faces[face][(i + 1) % 4]]);
+    }
+    return area <= pow(volume->sideLength, 2);
 }
 
 void ProjectedMarchingCubes::postProcessMesh(SimpleMesh *pMesh)

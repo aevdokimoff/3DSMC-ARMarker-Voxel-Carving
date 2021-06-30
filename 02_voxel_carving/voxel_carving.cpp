@@ -14,6 +14,7 @@ u32 degree_progress_run_2 = 0;
 
 Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
     Volume<bool> volume(
+            side_length / (float) resolution,
             cv::Vec3d(-side_length / 2, -side_length / 2, 0),
             cv::Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
@@ -86,6 +87,16 @@ Vec3d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Ma
     intermediate = -intermediate / intermediate[2];
 
     return intermediate;
+}
+
+Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
+    Matx<double, 4, 3> our_intrinsic_inv;
+    our_intrinsic_inv(0, 0) = 1 / intrinsic(0, 0);
+    our_intrinsic_inv(1, 1) = 1 / intrinsic(1, 1);
+    our_intrinsic_inv(2, 2) = 1;
+
+    Vec4d intermediate = extrinsic.inv() * our_intrinsic_inv * pos;
+    return Vec3d(intermediate[0], intermediate[1], intermediate[2]);
 }
 
 void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {

@@ -3,6 +3,7 @@
 #include "volume.h"
 #include <functional>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/core.hpp>
 
 #define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
 #define IDX2D(x,y, res)   ((y*res)+x)
@@ -21,3 +22,4 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
                               bool carve_in_parallel, const std::function<void (const char*, Matx44d, Matx44d)> &onProcess);
 Matx44d getProjectionMatrix();
 Vec3d project_point_to_screen_space(Vec3d pos, Matx44d extrinsic, Matx44d intrinsic);
+Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic);

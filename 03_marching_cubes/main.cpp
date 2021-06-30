@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     std::string outputFile = "test_torus.off";
 
     unsigned int resolution = 50;
-    Volume<bool> volume(Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
+    Volume<bool> volume(1.2 / resolution, Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
     for (int x = 0; x < volume.getDimX(); x++)
     {
         for (int y = 0; y < volume.getDimY(); y++)

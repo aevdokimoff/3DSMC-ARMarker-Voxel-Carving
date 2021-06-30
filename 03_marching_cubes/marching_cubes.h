@@ -41,7 +41,7 @@ struct GridCell {
 struct TriangulatedCell : GridCell<bool> {
     Vec3d intersections[12]{};
     bool hasIntersection[12]{};
-    vector<Vec2d> sideIntersections[6]{};
+    vector<Vec3d> sideIntersections[6];
 
     TriangulatedCell() = default;
 };
@@ -387,13 +387,12 @@ private:
     vector<TriangulatedCell> grid;
     string dataPath;
 
-    int faces[6][4] = {};
-
     void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) override;
     void polygonise(TriangulatedCell &cell);
-    static void processImages(TriangulatedCell &cell, const string& path);
-    static void projectPixels(TriangulatedCell &cell, const char *file_path, Matx44d view_mat, Matx44d projection_mat);
+    void processImages(TriangulatedCell &cell, const string& path);
+    void projectPixels(TriangulatedCell &cell, const char *file_path, Matx44d view_mat, Matx44d projection_mat);
     void postProcessMesh(SimpleMesh *pMesh);
+    bool isPointInsideSquare(TriangulatedCell &cell, int face, const Vec3d& point);
 };
 
 #endif

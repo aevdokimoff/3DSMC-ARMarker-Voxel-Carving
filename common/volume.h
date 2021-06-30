@@ -15,7 +15,7 @@ template <typename T>
 class Volume
 {
 public:
-    Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
+    Volume(double sideLength, const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
 
 	inline void computeMinMaxValues(double& minVal, double& maxVal) const
 	{
@@ -138,10 +138,9 @@ public:
 
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
-
 	std::vector<T> vol;
-
 	double maxValue, minValue;
+	double sideLength;
 private:
 
 	//! x,y,z access to vol
