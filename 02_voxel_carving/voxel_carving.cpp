@@ -1,33 +1,23 @@
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <omp.h>
-
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <omp.h>
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "voxel_carving.hpp"
 
-#define IDX3D(x,y,z, res) ((z*res*res)+(y*res)+x)
-#define IDX2D(x,y, res)   ((y*res)+x)
-
-struct Pixel {
-    u8 r;
-    u8 g;
-    u8 b;
-};
-
 u32 degree_progress_run_1 = 0;
 u32 degree_progress_run_2 = 0;
 
-Volume generate_point_cloud(u32 resolution, f32 side_length) {
-    Volume volume(
+Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
+    Volume<bool> volume(
             cv::Vec3d(-side_length / 2, -side_length / 2, 0),
             cv::Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
-    std::fill(volume.vol.begin(), volume.vol.end(), 1.);
+    std::fill(volume.vol.begin(), volume.vol.end(), true);
     return volume;
 }
 
@@ -82,7 +72,7 @@ mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotatio
     return generate_look_at_mat(eye, center, up);
 }
 
-v3 project_voxel_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
+v3 project_point_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
 
     v4 our_intrinsic[3]; // 3x4
     our_intrinsic[0] = {intrinsic.rows[0].cols[0], 0, 0, 0};
@@ -123,10 +113,10 @@ v3 project_voxel_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
 
 }
 
-void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume<bool> *volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
     int image_width, image_height;
     int n;
-    Pixel* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
+    auto* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
     if (!pixels) {
         fprintf(stderr, "Error opening image: %s\n", image_path);
         return;
@@ -140,7 +130,7 @@ void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
-                v3 p = project_voxel_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
+                v3 p = project_point_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
 
                 int p_x = (p.x + 1.0f) / 2.0f * image_width;
                 int p_y = (p.y + 1.0f) / 2.0f * image_height;
@@ -179,8 +169,8 @@ void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view
     }
 }
 
-void carve_using_single_run(Volume *volume, const char* run_path, mat4x4 projection_mat,
-                            bool carve_in_parallel, bool output_result_image = false)
+void process_using_single_run(const char* run_path, mat4x4 projection_mat,
+                              bool carve_in_parallel, const std::function<void (const char*, mat4x4, mat4x4)> &onProcess)
 {
     char file_path[1024];
     sprintf(file_path, "%s/cam_info.txt", run_path);
@@ -211,40 +201,38 @@ void carve_using_single_run(Volume *volume, const char* run_path, mat4x4 project
         mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
 
         sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
-        carve_using_singe_image(volume, file_path,
-                                view_mat, projection_mat, output_result_image);
-
-
+        onProcess(file_path, view_mat, projection_mat);
     }
     printf("\rDone processing run %s\n", run_path);
 }
 
+mat4x4 getProjectionMatrix() {
+    f32 y_fov = 0.3503711;
+    f32 aspect = 1.509804;
+    f32 zNear = 0.3;
+    f32 zFar = 200;
+    return perspectiveRH_ZO(y_fov, aspect, zNear, zFar);
+}
 
-void voxel_carve(Volume *volume, u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
+void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_parallel, bool output_result_image) {
     static char file_path1[1024];
     static char file_path2[1024];
 
-    f32 y_fov = 0.3503711;
-    f32 aspect = 1.509804;
-    mat4x4 proj_mat = perspectiveRH_ZO(y_fov, aspect, 0.3, 200);
+    mat4x4 proj_mat = getProjectionMatrix();
 
     u32 num_threads = (carve_in_parallel) ? 2 : 1;
 
     printf("Progress in runs:\n");
 
+    auto voxel_carve = [&](const char* file_path, mat4x4 view_mat, mat4x4 projection_mat) {
+        carve_using_singe_image(volume, file_path, view_mat, projection_mat, output_result_image);
+    };
+
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, true);
+    process_using_single_run(file_path1, proj_mat, carve_in_parallel, voxel_carve);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, true);
+    process_using_single_run(file_path2, proj_mat, carve_in_parallel, voxel_carve);
 
     delete volume;
-}
-
-int main(int argc, char *argv[]) {
-    u32 resolution = 100;
-    f32 sideLength = 0.1;
-    Volume volume = generate_point_cloud(resolution, sideLength);
-    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_owl", false);
-    return 0;
 }

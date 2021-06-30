@@ -11,6 +11,7 @@ typedef unsigned int uint;
 using namespace cv;
 
 //! A regular volume dataset
+template <typename T>
 class Volume
 {
 public:
@@ -31,7 +32,7 @@ public:
 	void compute_ddx_dddx();
 
 	//! Set the value at i.
-	inline void set(uint i, double val)
+	inline void set(uint i, T val)
 	{
 		if (val > maxValue)
 			maxValue = val;
@@ -43,7 +44,7 @@ public:
 	}
 
 	//! Set the value at (x_, y_, z_).
-	inline void set(uint x_, uint y_, uint z_, double val)
+	inline void set(uint x_, uint y_, uint z_, T val)
 	{
         if (val > maxValue)
             maxValue = val;
@@ -55,19 +56,25 @@ public:
 	};
 
 	//! Get the value at (x_, y_, z_).
-	inline double get(uint i) const
+	inline T get(uint i) const
 	{
 		return vol[i];
 	};
 
+	//! Get number of voxels
+	inline uint getVoxelCnt() const
+	{
+        return dx * dy * dz;
+	}
+
 	//! Get the value at (x_, y_, z_).
-	inline double get(uint x_, uint y_, uint z_) const
+	inline T get(uint x_, uint y_, uint z_) const
 	{
 		return vol[getPosFromTuple(x_, y_, z_)];
 	};
 
 	//! Get the value at (pos.x, pos.y, pos.z).
-	inline double get(const Vec3i& pos_) const
+	inline T get(const Vec3i& pos_) const
 	{
 		return(get(pos_[0], pos_[1], pos_[2]));
 	}
@@ -95,9 +102,6 @@ public:
 	{
 		return Vec3d(posX(i), posY(j), posZ(k));
 	}
-
-	//! Sets all entries in the volume to '0'
-	void clean();
 
 	//! Returns number of cells in x-dir.
 	inline uint getDimX() const { return dx; }
@@ -135,18 +139,21 @@ public:
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
 
-	std::vector<double> vol;
+	std::vector<T> vol;
 
 	double maxValue, minValue;
 private:
 
 	//! x,y,z access to vol
-	inline double vol_access(int x, int y, int z) const
+	inline T vol_access(int x, int y, int z) const
 	{
 		return vol[getPosFromTuple(x, y, z)];
 	}
 };
 
-void print(const Volume& volume);
+template <typename T>
+void print(const Volume<T> &volume);
+
+template class Volume<bool>;
 
 #endif

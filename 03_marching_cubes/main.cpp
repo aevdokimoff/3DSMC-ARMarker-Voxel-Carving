@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     std::string outputFile = "test_torus.off";
 
     unsigned int resolution = 50;
-    Volume volume(Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
+    Volume<bool> volume(Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
     for (int x = 0; x < volume.getDimX(); x++)
     {
         for (int y = 0; y < volume.getDimY(); y++)
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     SimpleMesh mesh;
     SimpleMarchingCubes marchingCubes(&volume);
-    marchingCubes.processVolume(0.0f, &mesh);
+    marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))
     {

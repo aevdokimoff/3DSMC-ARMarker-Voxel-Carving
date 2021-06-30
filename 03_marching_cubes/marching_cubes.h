@@ -3,40 +3,70 @@
 
 #include "simple_mesh.h"
 #include "volume.h"
+#include "voxel_carving.hpp"
+#include "../3rd_party_libs/stb/stb_image.h"
 
+#include <utility>
 #include <opencv2/core/mat.hpp>
+#include <utility>
+#include <map>
+#include <functional>
 
 using namespace cv;
+using namespace std;
 
-struct MC_Triangle {
-    Vec3d p[3]{};
+struct Triangle {
+    Vec3d points[3]{};
 
-    MC_Triangle() = default;
+    Triangle() = default;
 
-    MC_Triangle(Vec3d _p[3]) {
-        std::copy(_p, _p + 3, p);
+    Triangle(Vec3d _p[3]) {
+        copy(_p, _p + 3, points);
     }
 };
 
-struct MC_Gridcell {
-    Vec3d p[8]{};
-    double val[8]{};
+template <typename T>
+struct GridCell {
+    Vec3d corners[8]{};
+    T values[8]{};
 
-    MC_Gridcell() = default;
+    GridCell() = default;
 
-    MC_Gridcell(Vec3d _p[8], double _val[8]) {
-        std::copy(_p, _p + 8, p);
-        std::copy(_val, _val + 8, val);
+    GridCell(Vec3d _p[8], double _val[8]) {
+        copy(_p, _p + 8, corners);
+        copy(_val, _val + 8, values);
     }
+};
+
+struct TriangulatedCell : GridCell<bool> {
+    Vec3d intersections[12]{};
+    bool hasIntersection[12]{};
+    vector<Vec2d> sideIntersections[6]{};
+
+    TriangulatedCell() = default;
 };
 
 class MarchingCubes
 {
 public:
-    explicit MarchingCubes(Volume *_vol) : vol(_vol) {}
-
-    bool processVolume(double isolevel, SimpleMesh* mesh);
+    explicit MarchingCubes(Volume<bool> *_volume) : volume(_volume) {}
+    virtual void processVolume(SimpleMesh *mesh) = 0;
 protected:
+    int edges[12][2] = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
+    int faces[6][4] = {
+            {0, 1, 2, 3}, {4, 5, 6, 7},
+            {0, 1, 5, 4}, {3, 2, 6, 7},
+            {1, 5, 6, 2}, {0, 4, 7, 3}
+    };
+    int facesByEdges[6][4] = {
+            {0, 1, 2, 3}, {4, 5, 6, 7},
+            {0, 9, 4, 8}, {2, 10, 6, 11},
+            {9, 5, 10, 1}, {8, 7, 11, 3}
+    };
     int edgeTable[256] = {
             0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
             0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
@@ -331,22 +361,39 @@ protected:
             { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
     };
 
-    Volume* vol;
-//private:
-    virtual bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) = 0;
-    virtual int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) = 0;
-    virtual Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) = 0;
+    Volume<bool> *volume;
+    void fillCell(GridCell<bool> &cell, int x, int y, int z);
+private:
+    virtual void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) = 0;
 };
 
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
-    explicit SimpleMarchingCubes(Volume *_vol);
-//private:
-protected:
-    bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) override;
-    int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) override;
-    Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) override;
+    explicit SimpleMarchingCubes(Volume<bool> *_volume);
+    void processVolume(SimpleMesh* mesh) override;
+private:
+    void processVolumeCell(int x, int y, int z, SimpleMesh *mesh) override;
+    static Vec3d interpret(const Vec3d &p1, const Vec3d &p2);
+    int polygonise(const GridCell<bool> &grid, Triangle *triangles);
+};
+
+class ProjectedMarchingCubes : public MarchingCubes
+{
+public:
+    explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath);
+    void processVolume(SimpleMesh* mesh) override;
+private:
+    vector<TriangulatedCell> grid;
+    string dataPath;
+
+    int faces[6][4] = {};
+
+    void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) override;
+    void polygonise(TriangulatedCell &cell);
+    static void processImages(TriangulatedCell &cell, const string& path);
+    static void projectPixels(TriangulatedCell &cell, const char *file_path, mat4x4 view_mat, mat4x4 projection_mat);
+    void postProcessMesh(SimpleMesh *pMesh);
 };
 
 #endif

@@ -1,7 +1,8 @@
 #include "volume.h"
 #include <cmath>
 
-Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
+template <typename T>
+Volume<T>::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
 {
     v_min = min_;
     v_max = max_;
@@ -9,14 +10,15 @@ Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution)
 	dx = resolution;
 	dy = resolution;
 	dz = resolution;
-	vol = std::vector<double>(dx * dy * dz);
+	vol = std::vector<T>((dx + 1) * (dy + 1) * (dz + 1));
 
 	compute_ddx_dddx();
 }
 
 
 //! Computes spacing in x,y,z-directions.
-void Volume::compute_ddx_dddx()
+template <typename T>
+void Volume<T>::compute_ddx_dddx()
 {
 	ddx = 1.0f / (dx - 1);
 	ddy = 1.0f / (dy - 1);
@@ -35,27 +37,24 @@ void Volume::compute_ddx_dddx()
 	diag = v_max - v_min;
 }
 
-//! Sets all entries in the volume to '0'
-void Volume::clean()
-{
-	for (uint i1 = 0; i1 < dx * dy * dz; i1++) vol[i1] = double(0.0);
-}
-
 //! Sets minimum extension
-void Volume::SetMin(const Vec3d& min_)
+template <typename T>
+void Volume<T>::SetMin(const Vec3d& min_)
 {
     v_min = min_;
 	diag = v_max - v_min;
 }
 
 //! Sets maximum extension
-void Volume::SetMax(const Vec3d& max_)
+template <typename T>
+void Volume<T>::SetMax(const Vec3d& max_)
 {
     v_max = max_;
 	diag = v_max - v_min;
 }
 
-void print(const Volume& volume) {
+template <typename T>
+void print(const Volume<T>& volume) {
     for (u32 z = 0; z < volume.dz; ++z) {
         for (u32 y = 0; y < volume.dy; ++y) {
             for (u32 x = 0; x < volume.dx; ++x) {
