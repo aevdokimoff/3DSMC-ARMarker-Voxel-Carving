@@ -21,99 +21,74 @@ Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
     return volume;
 }
 
-mat4x4 generate_look_at_mat(v3 eye, v3 center, v3 up) {
-    v3 f = normalize(eye - center);
-    v3 s = normalize(cross(f, up));
-    v3 u = cross(s, f);
+Matx44d generate_look_at_mat(const Vec3d &eye, const Vec3d &center, const Vec3d &up) {
+    Vec3d f = normalize(eye - center);
+    Vec3d s = normalize(f.cross(up));
+    Vec3d u = s.cross(f);
 
-    mat4x4 result = generate_identity_4x4();
-    result.rows[0].cols[0] = s.x;
-    result.rows[0].cols[1] = s.y;
-    result.rows[0].cols[2] = s.z;
-    result.rows[1].cols[0] = u.x;
-    result.rows[1].cols[1] = u.y;
-    result.rows[1].cols[2] = u.z;
-    result.rows[2].cols[0] =-f.x;
-    result.rows[2].cols[1] =-f.y;
-    result.rows[2].cols[2] =-f.z;
-    result.rows[0].cols[3] =-dot(s, eye);
-    result.rows[1].cols[3] =-dot(u, eye);
-    result.rows[2].cols[3] = dot(f, eye);
+    Matx44d result = Matx44d::eye();
+    result(0, 0) = s[0];
+    result(0, 1) = s[1];
+    result(0, 2) = s[2];
+    result(1, 0) = u[0];
+    result(1, 1) = u[1];
+    result(1, 2) = u[2];
+    result(2, 0) = -f[0];
+    result(2, 1) = -f[1];
+    result(2, 2) = -f[2];
+    result(0, 3) = -s.dot(eye);
+    result(1, 3) = -u.dot(eye);
+    result(2, 3) = f.dot(eye);
 
     return result;
 }
 
-mat4x4 perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
+Matx44d perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
     // assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
 
     f32 const tanHalfFovy = tan(fovy / 2.0f);
 
-    mat4x4 result;
+    Matx44d result;
     memset(&result, 0, sizeof(result));
 
-    result.rows[0].cols[0] = 1.0 / (aspect * tanHalfFovy);
-    result.rows[1].cols[1] = 1.0 / (tanHalfFovy);
-    result.rows[2].cols[2] = zFar / (zNear - zFar);
-    result.rows[3].cols[2] = -1.0;
-    result.rows[2].cols[3] = -(zFar * zNear) / (zFar - zNear);
+    result(0, 0) = 1.0 / (aspect * tanHalfFovy);
+    result(1, 1) = 1.0 / (tanHalfFovy);
+    result(2, 2) = zFar / (zNear - zFar);
+    result(3, 2) = -1.0;
+    result(2, 3) = -(zFar * zNear) / (zFar - zNear);
     return result;
 }
 
-mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
+Matx44d generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
     obj_rotation = -obj_rotation * M_PI / 180.0f;
-    v3 eye    {offset_horiz, 0, offset_vert};
-    v3 center {0, 0, 0};
-    v3 up     {0, 0, 1};
+    Vec3d eye    {offset_horiz, 0, offset_vert};
+    Vec3d center {0, 0, 0};
+    Vec3d up     {0, 0, 1};
 
-    mat3x3 rot_z = generate_z_rot_mat(obj_rotation);
+    Matx33d rot_z = generate_z_rot_mat(obj_rotation);
     eye = rot_z * eye;
 
 
     return generate_look_at_mat(eye, center, up);
 }
 
-v3 project_point_to_screen_space(v3 pos, mat4x4 extrinsic, mat4x4 intrinsic) {
+Vec3d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
+    Matx<double, 3, 4> our_intrinsic;
+    our_intrinsic(0, 0) = intrinsic(0, 0);
+    our_intrinsic(1, 1) = intrinsic(1, 1);
+    our_intrinsic(2, 2) = 1;
 
-    v4 our_intrinsic[3]; // 3x4
-    our_intrinsic[0] = {intrinsic.rows[0].cols[0], 0, 0, 0};
-    our_intrinsic[1] = {0, intrinsic.rows[1].cols[1], 0, 0};
-    our_intrinsic[2] = {0, 0, 1, 0};
+    Matx<double, 3, 4> ourTemp = our_intrinsic * extrinsic; //[3x4]  = our_intrinsic * extrinsic
 
-    v4 our_temp[3]; //[3x4]  = our_intrinsic * extrinsic
-    our_temp[0] = {
-        our_intrinsic[0].x * extrinsic.rows[0].cols[0],
-        our_intrinsic[0].x * extrinsic.rows[0].cols[1],
-        our_intrinsic[0].x * extrinsic.rows[0].cols[2],
-        our_intrinsic[0].x * extrinsic.rows[0].cols[3],
-    };
-    our_temp[1] = {
-        our_intrinsic[1].y * extrinsic.rows[1].cols[0],
-        our_intrinsic[1].y * extrinsic.rows[1].cols[1],
-        our_intrinsic[1].y * extrinsic.rows[1].cols[2],
-        our_intrinsic[1].y * extrinsic.rows[1].cols[3],
-    };
-    our_temp[2] = {
-        extrinsic.rows[2].cols[0],
-        extrinsic.rows[2].cols[1],
-        extrinsic.rows[2].cols[2],
-        extrinsic.rows[2].cols[3],
-    };
+    Vec4d pos4d(pos[0], pos[1], pos[2], 1);
+    Vec3d intermediate = ourTemp * pos4d;
 
-    v4 pos_v4 = to_v4(pos);
-    v3 intermediate = { // [3x1] = our_tmp (3x4) * pos (4x1)
-        dot(our_temp[0], pos_v4),
-        dot(our_temp[1], pos_v4),
-        dot(our_temp[2], pos_v4)
-    };
-    
-    
-    intermediate = (-1.0f /intermediate.z) * intermediate;
+    intermediate = -intermediate / intermediate[2];
 
     return intermediate;
-
 }
 
-void carve_using_singe_image(Volume<bool> *volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
     int image_width, image_height;
     int n;
     auto* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
@@ -130,15 +105,15 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, mat4x
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
-                v3 p = project_point_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
+                Vec3d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
-                int p_x = (p.x + 1.0f) / 2.0f * image_width;
-                int p_y = (p.y + 1.0f) / 2.0f * image_height;
+                int p_x = (p[0] + 1.0f) / 2.0f * image_width;
+                int p_y = (p[1] + 1.0f) / 2.0f * image_height;
 
 
                 bool outside = pixels[IDX2D(p_x, p_y, image_width)].r < 150;
                 if (outside) {
-                    volume->set(x, y, z, 0);
+                    volume->set(x, y, z, false);
                 }
 
                 if (output_result_image) {
@@ -169,8 +144,8 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, mat4x
     }
 }
 
-void process_using_single_run(const char* run_path, mat4x4 projection_mat,
-                              bool carve_in_parallel, const std::function<void (const char*, mat4x4, mat4x4)> &onProcess)
+void process_using_single_run(const char* run_path, Matx44d projection_mat,
+                              bool carve_in_parallel, const std::function<void (const char*, Matx44d, Matx44d)> &onProcess)
 {
     char file_path[1024];
     sprintf(file_path, "%s/cam_info.txt", run_path);
@@ -198,7 +173,7 @@ void process_using_single_run(const char* run_path, mat4x4 projection_mat,
 
         printf("\r %03d deg", degrees);
 
-        mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
+        Matx44d view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
 
         sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
         onProcess(file_path, view_mat, projection_mat);
@@ -206,7 +181,7 @@ void process_using_single_run(const char* run_path, mat4x4 projection_mat,
     printf("\rDone processing run %s\n", run_path);
 }
 
-mat4x4 getProjectionMatrix() {
+Matx44d getProjectionMatrix() {
     f32 y_fov = 0.3503711;
     f32 aspect = 1.509804;
     f32 zNear = 0.3;
@@ -218,13 +193,13 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
     static char file_path1[1024];
     static char file_path2[1024];
 
-    mat4x4 proj_mat = getProjectionMatrix();
+    Matx44d proj_mat = getProjectionMatrix();
 
     u32 num_threads = (carve_in_parallel) ? 2 : 1;
 
     printf("Progress in runs:\n");
 
-    auto voxel_carve = [&](const char* file_path, mat4x4 view_mat, mat4x4 projection_mat) {
+    auto voxel_carve = [&](const char* file_path, Matx44d view_mat, Matx44d projection_mat) {
         carve_using_singe_image(volume, file_path, view_mat, projection_mat, output_result_image);
     };
 

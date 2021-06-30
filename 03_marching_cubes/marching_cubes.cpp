@@ -142,15 +142,15 @@ void ProjectedMarchingCubes::polygonise(TriangulatedCell &cell)
 
 void ProjectedMarchingCubes::processImages(TriangulatedCell &cell, const string& path)
 {
-    auto processImage = [&](const char* filePath, mat4x4 viewMatrix, mat4x4 projectionMatrix) {
+    auto processImage = [&](const char* filePath, Matx44d viewMatrix, Matx44d projectionMatrix) {
         projectPixels(cell, filePath, viewMatrix, projectionMatrix);
     };
 
-    mat4x4 proj_mat = getProjectionMatrix();
+    Matx44d proj_mat = getProjectionMatrix();
     process_using_single_run(path.data(), proj_mat, false, processImage);
 }
 
-void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, mat4x4 viewMatrix, mat4x4 projectionMatrix)
+void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, Matx44d viewMatrix, Matx44d projectionMatrix)
 {
     int width, height;
     int n;
@@ -167,9 +167,9 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
     int rightUpperCornerY = 0;
 
     for (const auto &corner : cell.corners) {
-        Vec3d projectedCorner = project_point_to_screen_space(v3(corner), viewMatrix, projectionMatrix).toVec3d();
+        Vec3d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
 
-        int cornerX = (projectedCorner[0] + 1) / 2 * width; //todo can be saved and not computed multiple times
+        int cornerX = (projectedCorner[0] + 1) / 2 * width; //todo (maybe) can be saved and not computed multiple times
         int cornerY = (projectedCorner[1] + 1) / 2 * height;
         leftBottomCornerX = min(leftBottomCornerX, cornerX);
         leftBottomCornerY = min(leftBottomCornerY, cornerY);
@@ -181,7 +181,8 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
     for (int i  = 0; i < 6; i++) {
         for (int x = leftBottomCornerX; x <= rightUpperCornerX; x++) {
             for (int y = leftBottomCornerY; y <= rightUpperCornerY; y++) {
-                Vec3d cameraPos = Vec3d(viewMatrix.rows[0].cols[3], viewMatrix.rows[1].cols[3], viewMatrix.rows[2].cols[3]);
+                Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
+
                 //todo intersect ith side with preimage
             }
         }

@@ -392,7 +392,7 @@ private:
     void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) override;
     void polygonise(TriangulatedCell &cell);
     static void processImages(TriangulatedCell &cell, const string& path);
-    static void projectPixels(TriangulatedCell &cell, const char *file_path, mat4x4 view_mat, mat4x4 projection_mat);
+    static void projectPixels(TriangulatedCell &cell, const char *file_path, Matx44d view_mat, Matx44d projection_mat);
     void postProcessMesh(SimpleMesh *pMesh);
 };
 
