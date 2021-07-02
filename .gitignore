@@ -43,3 +43,4 @@ voxel
 *.jpg
 *.dng
 *.DNG
+/build/

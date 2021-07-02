@@ -19,9 +19,6 @@ struct Pixel {
     u8 b;
 };
 
-u32 degree_progress_run_1 = 0;
-u32 degree_progress_run_2 = 0;
-
 Volume generate_point_cloud(u32 resolution, f32 side_length) {
     Volume volume(
             cv::Vec3d(-side_length / 2, -side_length / 2, 0),
@@ -70,7 +67,7 @@ mat4x4 perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
 }
 
 mat4x4 generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
-    obj_rotation = -obj_rotation * M_PI / 180.0f;
+    obj_rotation = obj_rotation * M_PI / 180.0f;
     v3 eye    {offset_horiz, 0, offset_vert};
     v3 center {0, 0, 0};
     v3 up     {0, 0, 1};
@@ -197,16 +194,17 @@ void carve_using_single_run(Volume *volume, const char* run_path, mat4x4 project
     fscanf(conf_file, "z_dist = %f cm\n", &z_dist);
     fclose(conf_file);
 
-    x_dist /= 100;
-    z_dist /= 100;
+    x_dist /= -100; // camera should be looking into x direction
+    z_dist /=  100;
 
     u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
 #pragma omp parallel for num_threads(thread_count)
-    for (int degrees = 0; degrees < 36; degrees ++) {
-        degrees *= 10;
+    for (int degrees = 0; degrees < 360; degrees += 10) {
+        char file_path[1024];
 
         printf("\r %03d deg", degrees);
+        fflush(stdout);
 
         mat4x4 view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
 
@@ -228,23 +226,21 @@ void voxel_carve(Volume *volume, u32 res, f32 side_length, const char* path_to_r
     f32 aspect = 1.509804;
     mat4x4 proj_mat = perspectiveRH_ZO(y_fov, aspect, 0.3, 200);
 
-    u32 num_threads = (carve_in_parallel) ? 2 : 1;
-
     printf("Progress in runs:\n");
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, false);
+    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, true);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, false);
-
-    delete volume;
+    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, true);
 }
 
 int main(int argc, char *argv[]) {
-    u32 resolution = 100;
-    f32 sideLength = 0.1;
+    u32 resolution = 100; // 100 vertices per dimension
+    f32 sideLength = 0.1; // 10 cm
+
     Volume volume = generate_point_cloud(resolution, sideLength);
-    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_owl", true);
+    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_duck", true);
+
     return 0;
 }
