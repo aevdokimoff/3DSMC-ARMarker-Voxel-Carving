@@ -39,6 +39,7 @@ voxel
 *.aux
 *.log
 
+build.sh
 *.png
 *.PNG
 *.JPG
