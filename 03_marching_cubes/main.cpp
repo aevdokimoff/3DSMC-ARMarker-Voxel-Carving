@@ -2,12 +2,15 @@
 #include "surface/implicit_surface.h"
 #include <string>
 
-int main(int argc, char *argv[]) {
+enum Object { owl, duck, unicorn};
+
+Volume<bool> getImplicitVolume(bool torus = true) {
     ImplicitSurface* surface;
-//	surface = new Sphere(Vec3d(0.5, 0.5, 0.5), 0.4);
-//	std::string outputfile = "test_sphere.off";
-    surface = new Torus(Vec3d(0.5, 0.5, 0.5), 0.4, 0.1);
-    std::string outputFile = "test_torus.off";
+    if (torus) {
+        surface = new Torus(Vec3d(0.5, 0.5, 0.5), 0.4, 0.1);
+    } else {
+    	surface = new Sphere(Vec3d(0.5, 0.5, 0.5), 0.4);
+    }
 
     unsigned int resolution = 50;
     Volume<bool> volume(1.2 / resolution, Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
@@ -23,9 +26,35 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+    delete surface;
+    return volume;
+}
+
+int main(int argc, char *argv[]) {
+    Object object = Object::owl;
+    std::string name;
+    switch (object) {
+        case Object::owl:
+            name = "owl";
+            break;
+        case Object::duck:
+            name = "duck";
+            break;
+        case Object::unicorn:
+            name = "unicorn";
+            break;
+        default:
+            cout << "Failed to interpret the object";
+            return 1;
+    }
+    std::string outputFile = "./results/silhouette_" + name + ".off";
+    Volume<bool> volume = generate_point_cloud(200, 0.1);
+    voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), false, false);
+    volume.writeToFile("./results/volume_" + name + ".txt");
 
     SimpleMesh mesh;
-    SimpleMarchingCubes marchingCubes(&volume);
+    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_owl");
+    //SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))
@@ -33,8 +62,5 @@ int main(int argc, char *argv[]) {
         std::cout << "ERROR: unable to write output file!" << std::endl;
         return -1;
     }
-
-    delete surface;
-
     return 0;
 }

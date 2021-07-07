@@ -5,7 +5,7 @@ ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _da
     grid.resize(volume->getVoxelCnt());
 }
 
-void ProjectedMarchingCubes::processVolume(SimpleMesh* mesh)
+void ProjectedMarchingCubes::processVolume(SimpleMesh *mesh)
 {
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
@@ -162,7 +162,7 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
 
     for (const auto &corner : cell.corners) {
         Vec3d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
-
+        cout << projectedCorner[0] << ' ' << projectedCorner[1] << "     ";
         int cornerX = (projectedCorner[0] + 1) / 2 * width; //todo (maybe) can be saved and not computed multiple times
         int cornerY = (projectedCorner[1] + 1) / 2 * height;
         leftBottomCornerX = min(leftBottomCornerX, cornerX);
@@ -201,6 +201,7 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
             }
         }
     }
+    stbi_image_free(pixels);
 }
 
 double computeArea(const Vec3d &p1, const Vec3d &p2, const Vec3d &p3)

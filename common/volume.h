@@ -15,6 +15,7 @@ template <typename T>
 class Volume
 {
 public:
+    Volume() = default;
     Volume(double sideLength, const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
 
 	inline void computeMinMaxValues(double& minVal, double& maxVal) const
@@ -143,6 +144,10 @@ public:
 	double sideLength;
 
     bool correctVoxel(int x, int y, int z);
+
+    bool writeToFile(const std::string &filename);
+
+    bool readFromFile(const std::string &filename);
 
 private:
 

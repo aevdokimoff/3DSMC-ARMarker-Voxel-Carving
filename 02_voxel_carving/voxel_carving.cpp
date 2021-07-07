@@ -152,7 +152,9 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const
         char file_name[1024];
         sprintf(file_name, "%s_carved.png", image_path);
         stbi_write_png(file_name, image_width, image_height, 3, output_pixels, 0);
+        stbi_image_free(output_pixels);
     }
+    stbi_image_free(pixels);
 }
 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,
@@ -179,8 +181,8 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
     u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
 #pragma omp parallel for num_threads(thread_count)
-    for (int degrees = 0; degrees < 36; degrees ++) {
-        degrees *= 10;
+    for (int degrees_it = 0; degrees_it < 36; degrees_it++) {
+        int degrees = degrees_it * 10;
 
         printf("\r %03d deg", degrees);
 
@@ -219,6 +221,4 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
     process_using_single_run(file_path2, proj_mat, carve_in_parallel, voxel_carve);
-
-    delete volume;
 }
