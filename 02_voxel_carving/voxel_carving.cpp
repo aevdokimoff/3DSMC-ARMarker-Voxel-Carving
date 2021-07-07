@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cmath>
 #include <omp.h>
+#include <iostream>
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
@@ -178,20 +179,20 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
     x_dist /= 100;
     z_dist /= 100;
 
-    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
+//    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
-#pragma omp parallel for num_threads(thread_count)
+//#pragma omp parallel for num_threads(thread_count)
     for (int degrees_it = 0; degrees_it < 36; degrees_it++) {
         int degrees = degrees_it * 10;
 
-        printf("\r %03d deg", degrees);
-
         Matx44d view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
+
+        std::cout << degrees << "  deg" << std::endl;
 
         sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
         onProcess(file_path, view_mat, projection_mat);
     }
-    printf("\rDone processing run %s\n", run_path);
+    std::cout << "Done processing run " << run_path << std::endl;
 }
 
 Matx44d getProjectionMatrix() {
@@ -210,7 +211,7 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
 
     u32 num_threads = (carve_in_parallel) ? 2 : 1;
 
-    printf("Progress in runs:\n");
+    std::cout <<"Progress in runs:\n";
 
     auto voxel_carve = [&](const char* file_path, Matx44d view_mat, Matx44d projection_mat) {
         carve_using_singe_image(volume, file_path, view_mat, projection_mat, output_result_image);

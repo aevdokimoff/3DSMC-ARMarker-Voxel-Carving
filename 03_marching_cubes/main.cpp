@@ -2,6 +2,14 @@
 #include "surface/implicit_surface.h"
 #include <string>
 
+#define USE_IMPLICIT_SURFACE false
+#define TORUS true
+
+#define OBJECT Object::owl
+
+#define WITH_VOXEL_CARVING false
+#define SAVE_VOLUME true
+
 enum Object { owl, duck, unicorn};
 
 Volume<bool> getImplicitVolume(bool torus = true) {
@@ -31,9 +39,8 @@ Volume<bool> getImplicitVolume(bool torus = true) {
 }
 
 int main(int argc, char *argv[]) {
-    Object object = Object::owl;
     std::string name;
-    switch (object) {
+    switch (OBJECT) {
         case Object::owl:
             name = "owl";
             break;
@@ -47,13 +54,28 @@ int main(int argc, char *argv[]) {
             cout << "Failed to interpret the object";
             return 1;
     }
+
     std::string outputFile = "./results/silhouette_" + name + ".off";
-    Volume<bool> volume = generate_point_cloud(200, 0.1);
-    voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), false, false);
-    volume.writeToFile("./results/volume_" + name + ".txt");
+
+    Volume<bool> volume;
+    if (USE_IMPLICIT_SURFACE)
+    {
+        volume = getImplicitVolume(TORUS);
+        name = TORUS ? "torus" : "sphere";
+    }
+    else if (WITH_VOXEL_CARVING)
+    {
+        volume = generate_point_cloud(100, 0.1);
+        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), false, false);
+        if (SAVE_VOLUME) volume.writeToFile("./results/volume_" + name + ".txt");
+    }
+    else
+    {
+        volume.readFromFile("./results/volume_" + name + ".txt");
+    }
 
     SimpleMesh mesh;
-    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_owl");
+    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
     //SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(&mesh);
 

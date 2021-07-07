@@ -5,38 +5,7 @@ ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _da
     grid.resize(volume->getVoxelCnt());
 }
 
-void ProjectedMarchingCubes::processVolume(SimpleMesh *mesh)
-{
-    for (int x = 0; x < volume->getDimX() - 1; x++)
-    {
-        for (int y = 0; y < volume->getDimY() - 1; y++)
-        {
-            for (int z = 0; z < volume->getDimZ() - 1; z++)
-            {
-                processVolumeCell(x, y, z, nullptr);
-            }
-        }
-    }
-    for (int x = 0; x < volume->getDimX() - 1; x++)
-    {
-        for (int y = 0; y < volume->getDimY() - 1; y++)
-        {
-            for (int z = 0; z < volume->getDimZ() - 1; z++)
-            {
-                postProcessVolumeCell(x, y, z, mesh);
-            }
-        }
-    }
-}
-
-void ProjectedMarchingCubes::processVolumeCell(int x, int y, int z, SimpleMesh* mesh)
-{
-    uint ind = volume->getPosFromTuple(x, y, z);
-    fillCell(grid[ind], x, y, z);
-    polygonise(grid[ind]);
-}
-
-void ProjectedMarchingCubes::polygonise(TriangulatedCell &cell)
+void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
 {
     //iterate through images where p1 and p2 is not on the same side of an object
     //for each image:
@@ -47,6 +16,45 @@ void ProjectedMarchingCubes::polygonise(TriangulatedCell &cell)
     //      linear regression, compute segment
     //      intersect segment with border (for one vertex select the further point)
 
+    for (int x = 0; x < volume->getDimX() - 1; x++)
+    {
+        for (int y = 0; y < volume->getDimY() - 1; y++)
+        {
+            for (int z = 0; z < volume->getDimZ() - 1; z++)
+            {
+                processVolumeCell(x, y, z, nullptr);
+            }
+        }
+    }
+
+    processImages(dataPath + "/run_1");
+    processImages(dataPath + "/run_2");
+
+    for (int ind = 0; ind < grid.size(); ind++) {
+        defineSurfaceLines(grid[ind]);
+    }
+
+    for (int x = 0; x < volume->getDimX() - 1; x++)
+    {
+        for (int y = 0; y < volume->getDimY() - 1; y++)
+        {
+            for (int z = 0; z < volume->getDimZ() - 1; z++)
+            {
+                postProcessVolumeCell(x, y, z, pMesh);
+            }
+        }
+    }
+}
+
+void ProjectedMarchingCubes::processVolumeCell(int x, int y, int z, SimpleMesh* mesh)
+{
+    uint ind = volume->getPosFromTuple(x, y, z);
+    fillCell(grid[ind], x, y, z);
+    markVertices(grid[ind]);
+}
+
+void ProjectedMarchingCubes::markVertices(TriangulatedCell &cell)
+{
     int degree = 1;
     for (bool value : cell.values) {
         if (!value) cell.cubeIndex |= degree;
@@ -60,11 +68,6 @@ void ProjectedMarchingCubes::polygonise(TriangulatedCell &cell)
         if (edgeTable[cell.cubeIndex] & degree) hasIntersection = true;
         degree <<= 1;
     }
-
-    processImages(cell, dataPath + "/run_1");
-    processImages(cell, dataPath + "/run_2");
-
-    defineSurfaceLines(cell);
 }
 
 Vec3d randomBetween(Vec3d &point1, const Vec3d &point2) {
@@ -134,10 +137,13 @@ void ProjectedMarchingCubes::computeSplitLine(TriangulatedCell &cell, int face, 
     cell.intersections[edge2] = furtherFrom(insideVertex1, cell.intersections[edge2], randomBetween(cell.corners[edges[edge2][0]], cell.corners[edges[edge2][1]]));
 }
 
-void ProjectedMarchingCubes::processImages(TriangulatedCell &cell, const string& path)
+void ProjectedMarchingCubes::processImages(const string& path)
 {
     auto processImage = [&](const char* filePath, Matx44d viewMatrix, Matx44d projectionMatrix) {
-        projectPixels(cell, filePath, viewMatrix, projectionMatrix);
+        for (auto & ind: grid)
+        {
+            projectPixels(ind, filePath, viewMatrix, projectionMatrix);
+        }
     };
 
     Matx44d proj_mat = getProjectionMatrix();
@@ -162,7 +168,6 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
 
     for (const auto &corner : cell.corners) {
         Vec3d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
-        cout << projectedCorner[0] << ' ' << projectedCorner[1] << "     ";
         int cornerX = (projectedCorner[0] + 1) / 2 * width; //todo (maybe) can be saved and not computed multiple times
         int cornerY = (projectedCorner[1] + 1) / 2 * height;
         leftBottomCornerX = min(leftBottomCornerX, cornerX);
