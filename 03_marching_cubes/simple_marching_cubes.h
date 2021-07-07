@@ -29,6 +29,7 @@ template <typename T>
 struct GridCell {
     Vec3d corners[8]{};
     T values[8]{};
+    uint cubeIndex = 0;
 
     GridCell() = default;
 
@@ -43,7 +44,9 @@ struct TriangulatedCell : GridCell<bool> {
     bool hasIntersection[12]{};
     vector<Vec3d> sideIntersections[6];
 
-    TriangulatedCell() = default;
+    TriangulatedCell() {
+        for (auto &intersection : intersections) intersection = {-INT32_MAX, -INT32_MAX, -INT32_MAX};
+    }
 };
 
 class MarchingCubes
@@ -360,6 +363,22 @@ protected:
             { 0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
             { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
     };
+    int edgeNeighbours[12][3][4] = {
+            {{0, -1, 0, 2}, {0, 0, -1, 4}, {0, -1, -1, 6}},
+            {{0, 0, -1, 5}, {-1, 0, 0, 3}, {-1, 0, -1, 7}},
+            {{0, 1, 0, 0}, {0, 0, -1, 6}, {0, 1, -1, 4}},
+            {{0, 0, -1, 7}, {1, 0, 0, 1}, {1, 0, -1, 5}},
+
+            {{0, -1, 0, 6}, {0, 0, 1, 0}, {0, -1, 1, 2}},
+            {{0, 0, 1, 1}, {-1, 0, 0, 7}, {-1, 0, 1, 3}},
+            {{0, 1, 0, 4}, {0, 0, 1, 2}, {0, 1, 1, 0}},
+            {{0, 0, 1, 3}, {1, 0, 0, 5}, {1, 0, 1, 1}},
+
+            {{1, 0, 0, 9}, {0, -1, 0, 11}, {1, -1, 0, 10}},
+            {{-1, 0, 0, 8}, {0, -1, 0, 10}, {-1, -1, 0, 11}},
+            {{-1, 0, 0, 11}, {0, 1, 0, 9}, {-1, 1, 0, 8}},
+            {{1, 0, 0, 10}, {0, 1, 0, 8}, {1, 1, 0, 9}},
+    };
 
     Volume<bool> *volume;
     void fillCell(GridCell<bool> &cell, int x, int y, int z);
@@ -375,7 +394,7 @@ public:
 private:
     void processVolumeCell(int x, int y, int z, SimpleMesh *mesh) override;
     static Vec3d interpret(const Vec3d &p1, const Vec3d &p2);
-    int polygonise(const GridCell<bool> &grid, Triangle *triangles);
+    int polygonise(GridCell<bool> &cell, Triangle *triangles);
 };
 
 class ProjectedMarchingCubes : public MarchingCubes
@@ -391,8 +410,11 @@ private:
     void polygonise(TriangulatedCell &cell);
     void processImages(TriangulatedCell &cell, const string& path);
     void projectPixels(TriangulatedCell &cell, const char *file_path, Matx44d view_mat, Matx44d projection_mat);
-    void postProcessMesh(SimpleMesh *pMesh);
     bool isPointInsideSquare(TriangulatedCell &cell, int face, const Vec3d& point);
+    void defineSurfaceLines(TriangulatedCell &cell);
+    void computeSplitLine(TriangulatedCell &cell, int face, int edge1, int edge2);
+    void postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh);
+    void writeMesh(TriangulatedCell &cell, SimpleMesh *pMesh);
 };
 
 #endif

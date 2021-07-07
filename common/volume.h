@@ -141,6 +141,9 @@ public:
 	std::vector<T> vol;
 	double maxValue, minValue;
 	double sideLength;
+
+    bool correctVoxel(int x, int y, int z);
+
 private:
 
 	//! x,y,z access to vol
@@ -148,6 +151,7 @@ private:
 	{
 		return vol[getPosFromTuple(x, y, z)];
 	}
+
 };
 
 template <typename T>

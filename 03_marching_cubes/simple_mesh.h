@@ -8,7 +8,7 @@
 
 using namespace cv;
 
-typedef Vec3f Vertex;
+typedef Vec3d Vertex;
 
 struct MeshTriangle
 {

@@ -16,7 +16,7 @@ include_directories(02_voxel_carving)
 add_executable(image_calibrator 01_data_acquisition/image_callibrator/main.cpp)
 add_executable(linear_scale_generator 01_data_acquisition/linear_scale_generator/main.cpp)
 add_executable(voxel_carving 02_voxel_carving/main.cpp ${COMMON_SOURCES})
-add_executable(marching_cubes 03_marching_cubes/marching_cubes.cpp ${COMMON_SOURCES} 03_marching_cubes/simple_mesh.cpp 03_marching_cubes/main.cpp 03_marching_cubes/surface/implicit_surface.cpp 02_voxel_carving/voxel_carving.cpp)
+add_executable(marching_cubes 03_marching_cubes/simple_marching_cubes.cpp ${COMMON_SOURCES} 03_marching_cubes/simple_mesh.cpp 03_marching_cubes/main.cpp 03_marching_cubes/surface/implicit_surface.cpp 02_voxel_carving/voxel_carving.cpp 03_marching_cubes/projected_marching_cubes.cpp)
 add_executable(aruco_test aruco_markers_detection/opecv-test-2/main.cpp)
 add_executable(aruco_markers_detection aruco_markers_detection/opecv-test-2/main.cpp)
 

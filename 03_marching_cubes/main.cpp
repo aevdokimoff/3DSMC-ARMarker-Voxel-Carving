@@ -1,4 +1,4 @@
-#include "marching_cubes.h"
+#include "simple_marching_cubes.h"
 #include "surface/implicit_surface.h"
 #include <string>
 
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
             {
                 Vec3d p = volume.pos(x, y, z);
                 double val = surface->Eval(p);
-                volume.set(x, y, z, val);
+                volume.set(x, y, z, val <= 0);
             }
         }
     }

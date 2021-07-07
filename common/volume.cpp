@@ -53,6 +53,13 @@ void Volume<T>::SetMax(const Vec3d& max_)
 }
 
 template <typename T>
+bool Volume<T>::correctVoxel(int x, int y, int z)
+{
+    return (x >= 0) && (y >= 0) && (z >= 0) && (x < dx - 1) && (y < dy - 1) && (z < dz - 1);
+}
+
+
+template <typename T>
 void print(const Volume<T>& volume) {
     for (u32 z = 0; z < volume.dz; ++z) {
         for (u32 y = 0; y < volume.dy; ++y) {
