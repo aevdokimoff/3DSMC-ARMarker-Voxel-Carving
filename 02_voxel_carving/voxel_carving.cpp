@@ -1,5 +1,3 @@
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -9,9 +7,7 @@
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "voxel_carving.hpp"
-
-u32 degree_progress_run_1 = 0;
-u32 degree_progress_run_2 = 0;
+#include "image.h"
 
 Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
     Volume<bool> volume(
@@ -62,7 +58,7 @@ Matx44d perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
 }
 
 Matx44d generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
-    obj_rotation = -obj_rotation * M_PI / 180.0f;
+    obj_rotation = obj_rotation * M_PI / 180.0f;
     Vec3d eye    {offset_horiz, 0, offset_vert};
     Vec3d center {0, 0, 0};
     Vec3d up     {0, 0, 1};
@@ -74,7 +70,7 @@ Matx44d generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotati
     return generate_look_at_mat(eye, center, up);
 }
 
-Vec3d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
+Vec2d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
     Matx<double, 3, 4> our_intrinsic;
     our_intrinsic(0, 0) = intrinsic(0, 0);
     our_intrinsic(1, 1) = intrinsic(1, 1);
@@ -87,7 +83,7 @@ Vec3d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Ma
 
     intermediate = -intermediate / intermediate[2];
 
-    return intermediate;
+    return Vec2d(intermediate[0], intermediate[1]);
 }
 
 Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
@@ -101,29 +97,23 @@ Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx4
 }
 
 void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
-    int image_width, image_height;
-    int n;
-    auto* pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
-    if (!pixels) {
-        fprintf(stderr, "Error opening image: %s\n", image_path);
-        return;
-    }
+    Image image = load_image(image_path);
+    Image output_image{};
 
-    Pixel* output_pixels;
     if (output_result_image) {
-        output_pixels = (Pixel*)stbi_load(image_path, &image_width, &image_height, &n, 0);
+        output_image = load_image(image_path);
     }
 
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
-                Vec3d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
+                Vec2d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
-                int p_x = (p[0] + 1.0f) / 2.0f * image_width;
-                int p_y = (p[1] + 1.0f) / 2.0f * image_height;
+                int p_x = (p[0] + 1.0f) / 2.0f * image.width;
+                int p_y = (p[1] + 1.0f) / 2.0f * image.height;
 
 
-                bool outside = pixels[IDX2D(p_x, p_y, image_width)].r < 150;
+                bool outside = image.at(p_x, p_y).r < 150;
                 if (outside) {
                     volume->set(x, y, z, false);
                 }
@@ -135,11 +125,11 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const
 
                     for (int j = p_y - thickness/2; j <= p_y+thickness/2; ++j) {
                         for (int i = p_x - thickness/2; i <= p_x+thickness/2; ++i) {
-                            if (j >= 0 && j < image_height && i >= 0 && i < image_width) {
+                            if (j >= 0 && j < image.height && i >= 0 && i < image.width) {
                                 if (outside) {
-                                    output_pixels[j * image_width + i] = red;
+                                    output_image.at(i, j) = red;
                                 } else {
-                                    output_pixels[j * image_width + i] = green;
+                                    output_image.at(i, j) = green;
                                 }
                             }
                         }
@@ -152,10 +142,8 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const
     if (output_result_image) {
         char file_name[1024];
         sprintf(file_name, "%s_carved.png", image_path);
-        stbi_write_png(file_name, image_width, image_height, 3, output_pixels, 0);
-        stbi_image_free(output_pixels);
+        store_image_as_png(output_image, file_name);
     }
-    stbi_image_free(pixels);
 }
 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,
@@ -176,7 +164,7 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
     fscanf(conf_file, "z_dist = %f cm\n", &z_dist);
     fclose(conf_file);
 
-    x_dist /= 100;
+    x_dist /= -100;
     z_dist /= 100;
 
 //    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
@@ -208,8 +196,6 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
     static char file_path2[1024];
 
     Matx44d proj_mat = getProjectionMatrix();
-
-    u32 num_threads = (carve_in_parallel) ? 2 : 1;
 
     std::cout <<"Progress in runs:\n";
 

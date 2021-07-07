@@ -4,7 +4,7 @@
 #include "simple_mesh.h"
 #include "volume.h"
 #include "voxel_carving.hpp"
-#include "../3rd_party_libs/stb/stb_image.h"
+#include "image.h"
 
 #include <utility>
 #include <opencv2/core/mat.hpp>

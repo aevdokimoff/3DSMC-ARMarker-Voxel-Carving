@@ -1,5 +1,4 @@
 #include "common.h"
-#include <cstring>
 
 Matx33d generate_z_rot_mat(f32 angle) {
     Matx33d mat;

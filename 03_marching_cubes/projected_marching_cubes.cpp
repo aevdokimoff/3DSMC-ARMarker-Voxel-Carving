@@ -152,24 +152,18 @@ void ProjectedMarchingCubes::processImages(const string& path)
 
 void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, Matx44d viewMatrix, Matx44d projectionMatrix)
 {
-    int width, height;
-    int n;
-    auto* pixels = (Pixel*)stbi_load(filePath, &width, &height, &n, 0);
-    if (!pixels) {
-        fprintf(stderr, "Error opening image: %s\n", filePath);
-        return;
-    }
+    Image image = load_image(filePath);
 
     //Compute Bounding Box
-    int leftBottomCornerX = width;
-    int leftBottomCornerY = height;
+    int leftBottomCornerX = image.width;
+    int leftBottomCornerY = image.height;
     int rightUpperCornerX = 0;
     int rightUpperCornerY = 0;
 
     for (const auto &corner : cell.corners) {
-        Vec3d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
-        int cornerX = (projectedCorner[0] + 1) / 2 * width; //todo (maybe) can be saved and not computed multiple times
-        int cornerY = (projectedCorner[1] + 1) / 2 * height;
+        Vec2d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
+        int cornerX = (projectedCorner[0] + 1) / 2 * image.width; //todo (maybe) can be saved and not computed multiple times
+        int cornerY = (projectedCorner[1] + 1) / 2 * image.height;
         leftBottomCornerX = min(leftBottomCornerX, cornerX);
         leftBottomCornerY = min(leftBottomCornerY, cornerY);
         rightUpperCornerX = max(rightUpperCornerX, cornerX);
@@ -183,10 +177,10 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
         {
             for (int y = leftBottomCornerY; y <= rightUpperCornerY; y++)
             {
-                if (pixels[IDX2D(x, y, width)].r >= 150) continue;
+                if (image.at(x, y).r >= 150) continue;
 
                 Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
-                Vec3d screenPos(2.0f * (float) x / (float) width - 1, 2.0f * (float) y / (float) height - 1, 1);
+                Vec3d screenPos(2.0f * (float) x / (float) image.width - 1, 2.0f * (float) y / (float) image.height - 1, 1);
                 Vec3d rayVector = project_screen_point_to_3d(screenPos, viewMatrix, projectionMatrix);
 
                 Vec3d planePoint(cell.corners[faces[i][0]]);
@@ -206,7 +200,6 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
             }
         }
     }
-    stbi_image_free(pixels);
 }
 
 double computeArea(const Vec3d &p1, const Vec3d &p2, const Vec3d &p3)

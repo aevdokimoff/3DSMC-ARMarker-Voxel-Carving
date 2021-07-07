@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     }
 
     SimpleMesh mesh;
-    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
-    //SimpleMarchingCubes marchingCubes(&volume);
+//    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
+    SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))

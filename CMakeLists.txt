@@ -9,7 +9,7 @@ add_compile_options(-DOpenCV_DIR=3rd_party_libs/opencv3.4/include)
 find_package(OpenCV REQUIRED)
 set(LIBRARIES  ${OpenCV_LIBS})
 
-set(COMMON_SOURCES common/common.cpp common/volume.cpp 02_voxel_carving/voxel_carving.cpp)
+set(COMMON_SOURCES common/common.cpp common/volume.cpp 02_voxel_carving/voxel_carving.cpp common/image.cpp)
 include_directories(common)
 include_directories(02_voxel_carving)
 
