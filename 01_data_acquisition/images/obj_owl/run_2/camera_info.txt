@@ -1,0 +1,3 @@
+flat_dist   = 17.5cm + 91 cm
+height_dist = -50cm + 98 cm
+focal_len   = 70
