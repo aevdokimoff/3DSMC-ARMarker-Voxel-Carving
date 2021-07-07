@@ -7,7 +7,7 @@
 
 #define OBJECT Object::owl
 
-#define WITH_VOXEL_CARVING false
+#define WITH_VOXEL_CARVING true
 #define SAVE_VOLUME true
 
 enum Object { owl, duck, unicorn};
@@ -67,7 +67,10 @@ int main(int argc, char *argv[]) {
     {
         volume = generate_point_cloud(100, 0.1);
         voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), false, false);
-        if (SAVE_VOLUME) volume.writeToFile("./results/volume_" + name + ".txt");
+        if (SAVE_VOLUME) {
+            volume.writeToFile("./results/volume_" + name + ".txt");
+            volume.writePointCloudToFile("./results/point_cloud_" + name + ".ply");
+        }
     }
     else
     {

@@ -149,6 +149,7 @@ public:
 
     bool readFromFile(const std::string &filename);
 
+    bool writePointCloudToFile(const std::string &filename);
 private:
 
 	//! x,y,z access to vol

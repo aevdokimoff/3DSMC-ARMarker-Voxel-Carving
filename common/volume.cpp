@@ -79,6 +79,28 @@ bool Volume<T>::writeToFile(const std::string &filename) {
 }
 
 template <typename T>
+bool Volume<T>::writePointCloudToFile(const std::string &filename)
+{
+    uint size = 0;
+    for (int x = 0; x <= dx; x++)
+        for (int y = 0; y <= dy; y++)
+            for (int z = 0; z <= dz; z++)
+                if (vol[getPosFromTuple(x, y, z)])
+                    size++;
+    std::ofstream outfile(filename);
+    outfile << "ply\n" << "format ascii 1.0\n" << "comment VTK generated PLY File\n";
+    outfile << "obj_info vtkPolyData points and polygons : vtk4.0\n" << "element vertex " << size << "\n";
+    outfile << "property float x\n" << "property float y\n" << "property float z\n" << "element face 0\n";
+    outfile << "property list uchar int vertex_indices\n" << "end_header\n";
+    for (int x = 0; x <= dx; x++)
+        for (int y = 0; y <= dy; y++)
+            for (int z = 0; z <= dz; z++)
+                if (vol[getPosFromTuple(x, y, z)])
+                    outfile << posX(x) << " " << posY(y) << " " << posZ(z) << std::endl;
+    outfile.close();
+}
+
+template <typename T>
 bool Volume<T>::readFromFile(const std::string &filename)
 {
     std::ifstream inFile(filename);
