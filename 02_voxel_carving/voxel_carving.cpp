@@ -1,12 +1,6 @@
 #include <cstdio>
-#include <cstring>
-#include <cmath>
 #include <omp.h>
-
-#include <iostream>
 #include <mutex>
-#include <condition_variable>
-
 #include "voxel_carving.hpp"
 #include "common.h"
 #include "image.h"
@@ -88,7 +82,7 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
         printf("\r %03d deg", degrees);
         fflush(stdout);
 
-        Matx44d view_mat = generate_view_mat(cam_pos, degrees);
+        Matx44d view_mat = generate_view_mat(cam_pos[0], cam_pos[2], degrees);
 
         char image_path[1024];
         sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);

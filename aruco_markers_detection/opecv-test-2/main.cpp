@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include "../../3rd_party_libs/opencv3.4/include/opencv2/core/utility.hpp"
 
 using namespace cv;
 using namespace std;
@@ -51,7 +52,6 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
 }
 
 int main() {
-    
     string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/aruco_markers_detection/opecv-test-2/calibration_params.yml";
     string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/aruco_markers_detection/opecv-test-2/markers_side.jpg";
     double horizontal_offset, vertical_offset;

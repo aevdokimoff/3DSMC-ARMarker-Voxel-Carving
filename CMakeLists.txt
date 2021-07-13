@@ -4,7 +4,6 @@ project(3DSMC_ARMarker_Voxel_Carving)
 set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
-add_compile_options(-DOpenCV_DIR=3rd_party_libs/opencv3.4/include)
 
 find_package(OpenCV REQUIRED)
 set(LIBRARIES  ${OpenCV_LIBS})

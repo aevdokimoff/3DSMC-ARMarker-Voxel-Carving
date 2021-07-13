@@ -1,6 +1,7 @@
 #include "common.h"
 #include <cstring>
 #include <cstdio>
+#include <opencv2/core/core.hpp>
 
 Matx33d generate_z_rot_mat(f32 angle) {
     Matx33d mat;
@@ -107,4 +108,14 @@ Vec3d get_cam_pos_for_run(const char* run_path) {
     cam_pos[2] /=  100;
 
     return cam_pos;
+}
+
+Vec3d project_screen_point_to_3d(const Vec3d &pos, const Matx44d &extrinsic, const Matx44d &intrinsic) {
+    Matx<double, 4, 3> our_intrinsic_inv;
+    our_intrinsic_inv(0, 0) = 1 / intrinsic(0, 0);
+    our_intrinsic_inv(1, 1) = 1 / intrinsic(1, 1);
+    our_intrinsic_inv(2, 2) = 1;
+
+    Vec4d intermediate = extrinsic.inv() * our_intrinsic_inv * pos;
+    return Vec3d(intermediate[0], intermediate[1], intermediate[2]);
 }

@@ -149,7 +149,7 @@ void ProjectedMarchingCubes::computeSplitLine(TriangulatedCell &cell, int face, 
 
 void ProjectedMarchingCubes::processImages(const string& path)
 {
-    Matx44d proj_mat = getProjectionMatrix();
+    Matx44d proj_mat = generate_our_proj_mat();
     auto start = chrono::steady_clock::now(); // debug
 
     auto processImage = [&](const char* filePath, uint ind, Matx44d viewMatrix, Matx44d projectionMatrix) {

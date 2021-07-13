@@ -1,7 +1,7 @@
 struct Vertex {
-    v3 pos;
-    v2 uv_coord;
-    v3 normal;
+    Vec3d pos;
+    Vec2d uv_coord;
+    Vec3d normal;
 };
 
 struct Mesh {
@@ -239,18 +239,18 @@ Mesh* load_obj(const char* path)  {
             if (index != -1) {
                 result->indices.append(vertex_fp_to_index.data[index].object);
             } else {
-                Vertex v {
-                    .pos {
+                Vertex v{
+                    Vec3d(
                         positions[3 * (u32)vfp.pos_i + 0],
                         positions[3 * (u32)vfp.pos_i + 1],
-                        positions[3 * (u32)vfp.pos_i + 2]},
-                    .uv_coord {
+                        positions[3 * (u32)vfp.pos_i + 2]),
+                    Vec2d(
                         uvs[2 * (u32)vfp.uv_i + 0],
-                        uvs[2 * (u32)vfp.uv_i + 1]},
-                    .normal {
+                        uvs[2 * (u32)vfp.uv_i + 1]),
+                    Vec3d(
                         normals[3 * (u32)vfp.norm_i + 0],
                         normals[3 * (u32)vfp.norm_i + 1],
-                        normals[3 * (u32)vfp.norm_i + 2]}
+                        normals[3 * (u32)vfp.norm_i + 2])
                 };
                 u32 new_index = result->vertices.count;
                 result->vertices.append(v);
