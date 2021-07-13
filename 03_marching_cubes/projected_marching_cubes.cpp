@@ -35,9 +35,10 @@ void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
     processImages(dataPath + "/run_1");
     processImages(dataPath + "/run_2");
 
+    int grid_size = grid.size();
     #pragma omp parallel for num_threads(thread_count)
-    for (auto & ind : grid) {
-        defineSurfaceLines(ind);
+    for (int i = 0; i < grid_size; i++) {
+        defineSurfaceLines(grid[i]);
     }
 
     #pragma omp parallel for num_threads(thread_count)

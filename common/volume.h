@@ -135,6 +135,10 @@ public:
 		return x * dy * dz + y * dz + z;
 	}
 
+    inline uint getPosFromTuple(const Vec3i &index) const
+    {
+        return index[0] * dy * dz + index[1] * dz + index[2];
+    }
 
 	//! Lower left and Upper right corner.
 	Vec3d v_min, v_max;
@@ -148,6 +152,7 @@ public:
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
 	std::vector<T> vol;
+	std::vector<Vec3i> surface_indices;
     std::vector<std::vector<Vec2i>> projections;
 
     double maxValue, minValue;

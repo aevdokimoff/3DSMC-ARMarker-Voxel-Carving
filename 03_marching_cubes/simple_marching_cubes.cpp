@@ -29,6 +29,12 @@ void SimpleMarchingCubes::processVolumeCell(int x, int y, int z)
     fillCell(grid[ind], x, y, z);
 
     polygonise(grid[ind]);
+
+    if (edgeTable[grid[ind].cubeIndex] != 0)
+    {
+        unique_lock<std::mutex> lock(marching_cubes_mutex);
+        volume->surface_indices.emplace_back(x, y, z);
+    }
 }
 
 Vec3d SimpleMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2)
@@ -85,35 +91,31 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
     u32 thread_count = (in_parallel) ? omp_get_max_threads() : 1;
     int considered_edges[] = {7, 6, 11};
 
+    int surface_cells_cnt = volume->surface_indices.size();
     #pragma omp parallel for num_threads(thread_count)
-    for (int x = 0; x < volume->getDimX() - 1; x++)
-    {
-        for (int y = 0; y < volume->getDimY() - 1; y++)
+    for (int surface_cell_ind = 0; surface_cell_ind < surface_cells_cnt; surface_cell_ind++) {
+        Vec3i index = volume->surface_indices[surface_cell_ind];
+        uint ind = volume->getPosFromTuple(index);
+        for (auto i: considered_edges)
         {
-            for (int z = 0; z < volume->getDimZ() - 1; z++)
+            if (grid[ind].hasIntersection[i])
             {
-                uint ind = volume->getPosFromTuple(x, y, z);
-                for (auto i: considered_edges)
+                uint vertex_index;
                 {
-                    if (grid[ind].hasIntersection[i])
-                    {
-                        uint vertex_index;
-                        {
-                            unique_lock<std::mutex> lock(marching_cubes_mutex);
-                            vertex_index = mesh->addVertex(grid[ind].intersections[i]);
-                        }
-                        vertex_indices[pair<uint, int>(ind, i)] = vertex_index;
+                    unique_lock<std::mutex> lock(marching_cubes_mutex);
+                    vertex_index = mesh->addVertex(grid[ind].intersections[i]);
+                    vertex_indices[pair<uint, int>(ind, i)] = vertex_index;
+                }
 
-                        for (int j = 0; j < 3; j++)
-                        {
-                            int neighbourX = edgeNeighbours[i][j][0] + x;
-                            int neighbourY = edgeNeighbours[i][j][1] + y;
-                            int neighbourZ = edgeNeighbours[i][j][2] + z;
-                            if (!volume->correctVoxel(neighbourX, neighbourY, neighbourZ)) continue;
-                            uint next_ind = volume->getPosFromTuple(neighbourX, neighbourY, neighbourZ);
-                            vertex_indices[pair<uint, int>(next_ind, edgeNeighbours[i][j][3])] = vertex_index;
-                        }
-                    }
+                for (int j = 0; j < 3; j++)
+                {
+                    int neighbourX = edgeNeighbours[i][j][0] + index[0];
+                    int neighbourY = edgeNeighbours[i][j][1] + index[1];
+                    int neighbourZ = edgeNeighbours[i][j][2] + index[2];
+                    if (!volume->correctVoxel(neighbourX, neighbourY, neighbourZ)) continue;
+                    uint next_ind = volume->getPosFromTuple(neighbourX, neighbourY, neighbourZ);
+                    unique_lock<std::mutex> lock(marching_cubes_mutex);
+                    vertex_indices[pair<uint, int>(next_ind, edgeNeighbours[i][j][3])] = vertex_index;
                 }
             }
         }
@@ -122,22 +124,16 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
     cout << "Added all vertices to the mesh.\n";
 
     #pragma omp parallel for num_threads(thread_count)
-    for (int x = 0; x < volume->getDimX() - 1; x++)
-    {
-        for (int y = 0; y < volume->getDimY() - 1; y++)
-        {
-            for (int z = 0; z < volume->getDimZ() - 1; z++)
-            {
-                uint ind = volume->getPosFromTuple(x, y, z);
-                for (int i = 0; triTable[grid[ind].cubeIndex][i] != -1; i += 3) {
-                    uint ind3 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i])];
-                    uint ind2 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 1])];
-                    uint ind1 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 2])];
+    for (int surface_cell_ind = 0; surface_cell_ind < surface_cells_cnt; surface_cell_ind++) {
+        uint ind = volume->getPosFromTuple(volume->surface_indices[surface_cell_ind]);
 
-                    unique_lock<std::mutex> lock(marching_cubes_mutex);
-                    mesh->addFace(ind1, ind2, ind3);
-                }
-            }
+        for (int i = 0; triTable[grid[ind].cubeIndex][i] != -1; i += 3) {
+            uint ind3 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i])];
+            uint ind2 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 1])];
+            uint ind1 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 2])];
+
+            unique_lock<std::mutex> lock(marching_cubes_mutex);
+            mesh->addFace(ind1, ind2, ind3);
         }
     }
 }

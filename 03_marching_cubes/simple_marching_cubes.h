@@ -16,8 +16,6 @@
 using namespace cv;
 using namespace std;
 
-mutex marching_cubes_mutex;
-
 struct Triangle {
     Vec3d points[3]{};
 
@@ -387,6 +385,7 @@ protected:
     };
 
     bool in_parallel;
+    mutex marching_cubes_mutex;
     Volume<bool> *volume;
     vector<TriangulatedCell> grid;
 
