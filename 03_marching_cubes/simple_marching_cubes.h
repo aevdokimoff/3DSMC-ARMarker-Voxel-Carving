@@ -3,40 +3,77 @@
 
 #include "simple_mesh.h"
 #include "volume.h"
+#include "voxel_carving.hpp"
+#include "image.h"
 
+#include <utility>
 #include <opencv2/core/mat.hpp>
+#include <utility>
+#include <map>
+#include <functional>
+#include <map>
 
 using namespace cv;
+using namespace std;
 
-struct MC_Triangle {
-    Vec3d p[3]{};
+struct Triangle {
+    Vec3d points[3]{};
 
-    MC_Triangle() = default;
+    Triangle() = default;
 
-    MC_Triangle(Vec3d _p[3]) {
-        std::copy(_p, _p + 3, p);
+    Triangle(Vec3d _p[3]) {
+        copy(_p, _p + 3, points);
     }
 };
 
-struct MC_Gridcell {
-    Vec3d p[8]{};
-    double val[8]{};
+template <typename T>
+struct GridCell {
+    Vec3d corners[8]{};
+    T values[8]{};
+    uint cubeIndex = 0;
 
-    MC_Gridcell() = default;
+    GridCell() = default;
 
-    MC_Gridcell(Vec3d _p[8], double _val[8]) {
-        std::copy(_p, _p + 8, p);
-        std::copy(_val, _val + 8, val);
+    GridCell(Vec3d _p[8], double _val[8]) {
+        copy(_p, _p + 8, corners);
+        copy(_val, _val + 8, values);
+    }
+};
+
+struct TriangulatedCell : GridCell<bool> {
+    Vec3d intersections[12]{};
+    bool hasIntersection[12]{};
+    vector<Vec3d> sideIntersections[6];
+
+    TriangulatedCell() {
+        for (auto &intersection : intersections) intersection = {-INT32_MAX, -INT32_MAX, -INT32_MAX};
     }
 };
 
 class MarchingCubes
 {
 public:
-    explicit MarchingCubes(Volume *_vol) : vol(_vol) {}
-
-    bool processVolume(double isolevel, SimpleMesh* mesh);
+    explicit MarchingCubes(Volume<bool> *_volume, bool _in_parallel = false) : volume(_volume), in_parallel(_in_parallel)
+    {
+        grid.resize(volume->getVoxelCnt());
+    }
+    virtual void processVolume(SimpleMesh *mesh) = 0;
 protected:
+    int edges[12][2] = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
+    int faces[6][4] = {
+            {0, 1, 2, 3}, {4, 5, 6, 7},
+            {0, 1, 5, 4}, {3, 2, 6, 7},
+            {1, 5, 6, 2}, {0, 4, 7, 3}
+    };
+    int facesByEdges[6][4] = {
+            {0, 1, 2, 3}, {4, 5, 6, 7},
+            {0, 9, 4, 8}, {2, 10, 6, 11},
+            {9, 5, 10, 1}, {8, 7, 11, 3}
+    };
     int edgeTable[256] = {
             0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
             0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
@@ -330,23 +367,61 @@ protected:
             { 0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
             { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
     };
+    int edgeNeighbours[12][3][4] = {
+            {{0, -1, 0, 2}, {0, 0, -1, 4}, {0, -1, -1, 6}},
+            {{0, 0, -1, 5}, {-1, 0, 0, 3}, {-1, 0, -1, 7}},
+            {{0, 1, 0, 0}, {0, 0, -1, 6}, {0, 1, -1, 4}},
+            {{0, 0, -1, 7}, {1, 0, 0, 1}, {1, 0, -1, 5}},
 
-    Volume* vol;
-//private:
-    virtual bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) = 0;
-    virtual int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) = 0;
-    virtual Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) = 0;
+            {{0, -1, 0, 6}, {0, 0, 1, 0}, {0, -1, 1, 2}},
+            {{0, 0, 1, 1}, {-1, 0, 0, 7}, {-1, 0, 1, 3}},
+            {{0, 1, 0, 4}, {0, 0, 1, 2}, {0, 1, 1, 0}},
+            {{0, 0, 1, 3}, {1, 0, 0, 5}, {1, 0, 1, 1}},
+
+            {{1, 0, 0, 9}, {0, -1, 0, 11}, {1, -1, 0, 10}},
+            {{-1, 0, 0, 8}, {0, -1, 0, 10}, {-1, -1, 0, 11}},
+            {{-1, 0, 0, 11}, {0, 1, 0, 9}, {-1, 1, 0, 8}},
+            {{1, 0, 0, 10}, {0, 1, 0, 8}, {1, 1, 0, 9}},
+    };
+
+    bool in_parallel;
+    mutex marching_cubes_mutex;
+    Volume<bool> *volume;
+    vector<TriangulatedCell> grid;
+
+    void fillCell(GridCell<bool> &cell, int x, int y, int z);
+    void fillMesh(SimpleMesh *mesh);
+private:
+    virtual void processVolumeCell(int x, int y, int z) = 0;
 };
 
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
-    explicit SimpleMarchingCubes(Volume *_vol);
-//private:
-protected:
-    bool processVolumeCell(int x, int y, int z, double isolevel, SimpleMesh* mesh) override;
-    int polygonise(MC_Gridcell grid, double isolevel, MC_Triangle* triangles) override;
-    Vec3d interpret(double isolevel, const Vec3d& p1, const Vec3d& p2, double valp1, double valp2) override;
+    explicit SimpleMarchingCubes(Volume<bool> *_volume, bool _in_parallel = false);
+    void processVolume(SimpleMesh *mesh) override;
+private:
+    void processVolumeCell(int x, int y, int z) override;
+    static Vec3d interpret(const Vec3d &p1, const Vec3d &p2);
+    void polygonise(TriangulatedCell &cell);
+};
+
+class ProjectedMarchingCubes : public MarchingCubes
+{
+public:
+    explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath, bool _in_parallel = false);
+    void processVolume(SimpleMesh* pMesh) override;
+private:
+    string dataPath;
+
+    void processVolumeCell(int x, int y, int z) override;
+    void markVertices(TriangulatedCell &cell);
+    void processImages(const string& path);
+    void projectPixels(TriangulatedCell &cell, const char *file_path, uint ind, Matx44d view_mat, Matx44d projection_mat);
+
+    void defineSurfaceLines(TriangulatedCell &cell);
+    void computeSplitLine(TriangulatedCell &cell, int face, int edge1, int edge2);
+    void postProcessVolumeCell(int x, int y, int z);
 };
 
 #endif

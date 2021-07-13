@@ -8,14 +8,14 @@
 
 using namespace cv;
 
-typedef Vec3f Vertex;
+typedef Vec3d Vertex;
 
-struct Triangle
+struct MeshTriangle
 {
     unsigned int idx0;
     unsigned int idx1;
     unsigned int idx2;
-    Triangle(unsigned int _idx0, unsigned int _idx1, unsigned int _idx2) :
+    MeshTriangle(unsigned int _idx0, unsigned int _idx1, unsigned int _idx2) :
             idx0(_idx0), idx1(_idx1), idx2(_idx2)
     {}
 };
@@ -35,7 +35,7 @@ public:
         return m_vertices;
     }
 
-    std::vector<Triangle>& getTriangles()
+    std::vector<MeshTriangle>& getTriangles()
     {
         return m_triangles;
     }
@@ -44,7 +44,7 @@ public:
 
 private:
     std::vector<Vertex> m_vertices;
-    std::vector<Triangle> m_triangles;
+    std::vector<MeshTriangle> m_triangles;
 };
 
 #endif

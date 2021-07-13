@@ -1,10 +1,11 @@
 #include <cstdlib>
 #include <cstdio>
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #define STB_IMAGE_IMPLEMENTATION
-#include "../3rd_party_libs/stb/stb_image_write.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../3rd_party_libs/stb/stb_image.h"
+#include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "image.h"
 
@@ -19,7 +20,7 @@ Image create_black_image(s32 width, s32 height) {
     return ret;
 };
 
-void store_image_as_png(Image image, const char* path) {
+void store_image_as_png(const Image &image, const char* path) {
     stbi_write_png(path, image.width,
                    image.height, 3,
                    image.pixels, 0);
@@ -36,7 +37,6 @@ Image load_image(const char* path) {
     return image;
 }
 
-void free_image(Image image) {
-    stbi_image_free(image.pixels);
-    image.pixels = nullptr;
+Image::~Image() {
+    stbi_image_free(pixels);
 }

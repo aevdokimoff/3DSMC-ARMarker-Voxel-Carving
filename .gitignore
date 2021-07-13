@@ -35,6 +35,10 @@
 
 generate_scale
 voxel
+cmake-build-release
+cmake-build-debug
+03_marching_cubes/results
+.idea
 
 *.aux
 *.log

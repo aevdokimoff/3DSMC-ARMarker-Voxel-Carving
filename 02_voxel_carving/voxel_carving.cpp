@@ -1,24 +1,24 @@
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
 #include <omp.h>
-
+#include <mutex>
 #include "voxel_carving.hpp"
 #include "common.h"
 #include "image.h"
 
-Volume generate_point_cloud(u32 resolution, f32 side_length) {
-    Volume volume(
-            cv::Vec3d(-side_length / 2, -side_length / 2, 0),
-            cv::Vec3d(side_length / 2, side_length / 2, side_length),
+std::mutex mutex;
+
+Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
+    Volume<bool> volume(
+            Vec3d(-side_length / 2, -side_length / 2, 0),
+            Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
-    std::fill(volume.vol.begin(), volume.vol.end(), 1.);
+    std::fill(volume.vol.begin(), volume.vol.end(), true);
     return volume;
 }
 
-void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view_mat, mat4x4 proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint ind, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
     Image image = load_image(image_path);
-    Image output_image;
+    Image output_image{};
 
     if (output_result_image) {
         output_image = load_image(image_path);
@@ -27,15 +27,18 @@ void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
-                v2 p = project_point_to_screen_space(v3(volume->pos(x, y, z)), view_mat, proj_mat);
 
-                int p_x = (p.x + 1.0f) / 2.0f * image.width;
-                int p_y = (p.y + 1.0f) / 2.0f * image.height;
+                Vec2d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
+                int p_x = (p[0] + 1.) / 2. * image.width;
+                int p_y = (p[1] + 1.) / 2. * image.height;
+
+                volume->projections[volume->getPosFromTuple(x, y, z)][ind] = Vec2i(p_x, p_y);
 
                 bool outside = image.at(p_x, p_y).r < 150;
                 if (outside) {
-                    volume->set(x, y, z, 0);
+                    std::unique_lock<std::mutex> lock(mutex);
+                    volume->set(x, y, z, false);
                 }
 
                 if (output_result_image) {
@@ -66,53 +69,44 @@ void carve_using_singe_image(Volume *volume, const char* image_path, mat4x4 view
     }
 }
 
-void carve_using_single_run(Volume *volume, const char* run_path, mat4x4 projection_mat,
-                            bool carve_in_parallel, bool output_result_image = false)
+void process_using_single_run(const char* run_path, Matx44d projection_mat,
+                              bool carve_in_parallel, const std::function<void (const char*, uint, Matx44d, Matx44d)> &onProcess)
 {
-    v3 cam_pos = get_cam_pos_for_run(run_path);
+    Vec3d cam_pos = get_cam_pos_for_run(run_path);
     u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
-#pragma omp parallel for num_threads(thread_count)
-    for (int degrees = 0; degrees < 360; degrees += 10) {
-        char file_path[1024];
+    #pragma omp parallel for num_threads(thread_count)
+    for (int degrees_it = 0; degrees_it < 36; degrees_it++) {
+        int degrees = degrees_it * 10;
 
         printf("\r %03d deg", degrees);
         fflush(stdout);
 
-        mat4x4 view_mat = generate_view_mat(cam_pos.x, cam_pos.z, degrees);
+        Matx44d view_mat = generate_view_mat(cam_pos[0], cam_pos[2], degrees);
 
-        sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
-        carve_using_singe_image(volume, file_path,
-                                view_mat, projection_mat, output_result_image);
-
-
+        char image_path[1024];
+        sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);
+        onProcess(image_path, degrees_it, view_mat, projection_mat);
     }
     printf("\rDone processing run %s\n", run_path);
 }
 
-
-void voxel_carve(Volume *volume, u32 res, f32 side_length, const char* path_to_runs, bool carve_in_parallel) {
+void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_parallel, bool output_result_image) {
     static char file_path1[1024];
     static char file_path2[1024];
 
-    mat4x4 proj_mat = generate_our_proj_mat();
+    Matx44d proj_mat = generate_our_proj_mat();
 
     printf("Progress in runs:\n");
+    fflush(stdout);
+
+    auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat, Matx44d projection_mat) {
+        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image);
+    };
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
-    carve_using_single_run(volume, file_path1, proj_mat, carve_in_parallel, true);
+    process_using_single_run(file_path1, proj_mat, carve_in_parallel, voxel_carve);
 
     sprintf(file_path2, "%s/run_2", path_to_runs);
-    carve_using_single_run(volume, file_path2, proj_mat, carve_in_parallel, true);
-}
-
-
-int main(int argc, char *argv[]) {
-    u32 resolution = 100; // 100 vertices per dimension
-    f32 sideLength = 0.1; // 10 cm
-
-    Volume volume = generate_point_cloud(resolution, sideLength);
-    voxel_carve(&volume, resolution, sideLength, "./01_data_acquisition/images/obj_duck", true);
-
-    return 0;
+    process_using_single_run(file_path2, proj_mat, carve_in_parallel, voxel_carve);
 }

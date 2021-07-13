@@ -16,7 +16,7 @@ unsigned int SimpleMesh::addVertex(Vertex& vertex)
 unsigned int SimpleMesh::addFace(unsigned int idx0, unsigned int idx1, unsigned int idx2)
 {
     auto fId = (unsigned int)m_triangles.size();
-    Triangle triangle(idx0, idx1, idx2);
+    MeshTriangle triangle(idx0, idx1, idx2);
     m_triangles.push_back(triangle);
     return fId;
 }
