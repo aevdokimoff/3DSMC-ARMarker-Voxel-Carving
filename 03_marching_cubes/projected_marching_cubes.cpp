@@ -1,5 +1,8 @@
 #include "simple_marching_cubes.h"
 
+#include <chrono> // debug
+using namespace chrono; // debug
+
 ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath) : MarchingCubes(_volume), dataPath(std::move(_dataPath))
 {
     grid.resize(volume->getVoxelCnt());
@@ -139,18 +142,25 @@ void ProjectedMarchingCubes::computeSplitLine(TriangulatedCell &cell, int face, 
 
 void ProjectedMarchingCubes::processImages(const string& path)
 {
-    auto processImage = [&](const char* filePath, Matx44d viewMatrix, Matx44d projectionMatrix) {
-        for (auto & ind: grid)
+    Matx44d proj_mat = getProjectionMatrix();
+    auto start = chrono::steady_clock::now(); // debug
+
+    auto processImage = [&](const char* filePath, uint ind, Matx44d viewMatrix, Matx44d projectionMatrix) {
+        for (int i = 0; i < grid.size(); i++)
         {
-            projectPixels(ind, filePath, viewMatrix, projectionMatrix);
+            projectPixels(grid[i], filePath, ind, viewMatrix, projectionMatrix);
+            if (i % 100 == 0) { // debug
+                auto end = chrono::steady_clock::now();
+                cout << "pixel " << i << " out of " << grid.size()
+                     << " computed in " << duration_cast<chrono::seconds>(end - start).count() << " sec" << endl;
+            }
         }
     };
 
-    Matx44d proj_mat = getProjectionMatrix();
     process_using_single_run(path.data(), proj_mat, false, processImage);
 }
 
-void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, Matx44d viewMatrix, Matx44d projectionMatrix)
+void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, uint ind, Matx44d viewMatrix, Matx44d projectionMatrix)
 {
     Image image = load_image(filePath);
 
@@ -161,59 +171,64 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
     int rightUpperCornerY = 0;
 
     for (const auto &corner : cell.corners) {
-        Vec2d projectedCorner = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
-        int cornerX = (projectedCorner[0] + 1) / 2 * image.width; //todo (maybe) can be saved and not computed multiple times
-        int cornerY = (projectedCorner[1] + 1) / 2 * image.height;
-        leftBottomCornerX = min(leftBottomCornerX, cornerX);
-        leftBottomCornerY = min(leftBottomCornerY, cornerY);
-        rightUpperCornerX = max(rightUpperCornerX, cornerX);
-        rightUpperCornerY = max(rightUpperCornerY, cornerY);
+        Vec2i projection = volume->projections[volume->getInd(corner)][ind];
+
+        leftBottomCornerX = min(leftBottomCornerX, projection[0]);
+        leftBottomCornerY = min(leftBottomCornerY, projection[1]);
+        rightUpperCornerX = max(rightUpperCornerX, projection[0]);
+        rightUpperCornerY = max(rightUpperCornerY, projection[1]);
     }
 
-    //
-    for (int i  = 0; i < 6; i++)
+    Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
+
+    for (int i = 1; i < 6; i += 2) // iterate through voxel faces only once
     {
-        for (int x = leftBottomCornerX; x <= rightUpperCornerX; x++)
+        for (int x = leftBottomCornerX; x <= rightUpperCornerX; x += 10)
         {
-            for (int y = leftBottomCornerY; y <= rightUpperCornerY; y++)
+            for (int y = leftBottomCornerY; y <= rightUpperCornerY; y += 10)
             {
                 if (image.at(x, y).r >= 150) continue;
 
-                Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);
                 Vec3d screenPos(2.0f * (float) x / (float) image.width - 1, 2.0f * (float) y / (float) image.height - 1, 1);
                 Vec3d rayVector = project_screen_point_to_3d(screenPos, viewMatrix, projectionMatrix);
+                Vec3d pos3d = cameraPos + rayVector;
 
-                Vec3d planePoint(cell.corners[faces[i][0]]);
-                Vec3d planeNormal = normalize(
-                        (cell.corners[faces[i][1]] - planePoint)
-                                .cross(cell.corners[faces[i][2]] - planePoint));
-
-                Vec3d diff = cameraPos - planePoint;
-                double prod1 = diff.dot(planeNormal);
-                double prod2 = rayVector.dot(planeNormal);
-                Vec3d intersection = cameraPos - rayVector * prod1 / prod2;
-
-                if (isPointInsideSquare(cell, i, intersection))
-                {
-                    cell.sideIntersections[i].push_back(intersection);
+                Vec3d intersection;
+                switch (i) {
+                    case 1:
+                        if (rayVector[2] != 0)
+                        {
+                            intersection[2] = cell.corners[faces[i][7]][2];
+                            double tmp = (pos3d[2] - intersection[2]) / rayVector[2];
+                            intersection[1] = pos3d[1] - rayVector[1] * tmp;
+                            intersection[0] = pos3d[0] - rayVector[0] * tmp;
+                        }
+                        break;
+                    case 3:
+                        if (rayVector[1] != 0)
+                        {
+                            intersection[1] = cell.corners[faces[i][7]][1];
+                            double tmp = (pos3d[1] - intersection[1]) / rayVector[1];
+                            intersection[2] = pos3d[2] - rayVector[2] * tmp;
+                            intersection[0] = pos3d[0] - rayVector[0] * tmp;
+                        }
+                        break;
+                    default:
+                        if (rayVector[0] != 0)
+                        {
+                            intersection[0] = cell.corners[faces[i][7]][0];
+                            double tmp = (pos3d[0] - intersection[0]) / rayVector[0];
+                            intersection[2] = pos3d[2] - rayVector[2] * tmp;
+                            intersection[1] = pos3d[1] - rayVector[1] * tmp;
+                        }
                 }
+                if (intersection[2] >= cell.corners[faces[i][1]][2] && intersection[2] <= cell.corners[faces[i][7]][2] &&
+                        intersection[1] >= cell.corners[faces[i][1]][1] && intersection[1] <= cell.corners[faces[i][7]][1] &&
+                        intersection[0] >= cell.corners[faces[i][1]][0] && intersection[0] <= cell.corners[faces[i][7]][0])
+                    cell.sideIntersections->push_back(intersection);
             }
         }
     }
-}
-
-double computeArea(const Vec3d &p1, const Vec3d &p2, const Vec3d &p3)
-{
-    return (p2 - p1).dot(p3 - p1);
-}
-
-bool ProjectedMarchingCubes::isPointInsideSquare(TriangulatedCell &cell, int face, const Vec3d &point)
-{
-    double area = 0;
-    for (int i = 0; i < 4; i++) {
-        area += computeArea(point, cell.corners[faces[face][i]], cell.corners[faces[face][(i + 1) % 4]]);
-    }
-    return area <= pow(volume->sideLength, 2);
 }
 
 void ProjectedMarchingCubes::postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh)

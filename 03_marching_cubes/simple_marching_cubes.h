@@ -409,8 +409,8 @@ private:
     void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) override;
     void markVertices(TriangulatedCell &cell);
     void processImages(const string& path);
-    void projectPixels(TriangulatedCell &cell, const char *file_path, Matx44d view_mat, Matx44d projection_mat);
-    bool isPointInsideSquare(TriangulatedCell &cell, int face, const Vec3d& point);
+    void projectPixels(TriangulatedCell &cell, const char *file_path, uint ind, Matx44d view_mat, Matx44d projection_mat);
+
     void defineSurfaceLines(TriangulatedCell &cell);
     void computeSplitLine(TriangulatedCell &cell, int face, int edge1, int edge2);
     void postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh);

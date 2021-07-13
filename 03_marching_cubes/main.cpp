@@ -7,7 +7,7 @@
 
 #define OBJECT Object::owl
 
-#define WITH_VOXEL_CARVING true
+#define WITH_VOXEL_CARVING false
 #define SAVE_VOLUME true
 
 enum Object { owl, duck, unicorn};
@@ -21,7 +21,7 @@ Volume<bool> getImplicitVolume(bool torus = true) {
     }
 
     unsigned int resolution = 50;
-    Volume<bool> volume(1.2 / resolution, Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
+    Volume<bool> volume(Vec3d(-0.1, -0.1, -0.1), Vec3d(1.1, 1.1, 1.1), resolution);
     for (int x = 0; x < volume.getDimX(); x++)
     {
         for (int y = 0; y < volume.getDimY(); y++)
@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
     }
     else if (WITH_VOXEL_CARVING)
     {
-        volume = generate_point_cloud(100, 0.1);
-        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), false, false);
+        volume = generate_point_cloud(10, 0.1);
+        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), true, false);
         if (SAVE_VOLUME) {
             volume.writeToFile("./results/volume_" + name + ".txt");
             volume.writePointCloudToFile("./results/point_cloud_" + name + ".ply");
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     }
 
     SimpleMesh mesh;
-//    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
-    SimpleMarchingCubes marchingCubes(&volume);
+    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
+//    SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))

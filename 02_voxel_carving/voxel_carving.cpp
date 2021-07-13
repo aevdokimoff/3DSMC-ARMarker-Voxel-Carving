@@ -11,7 +11,6 @@
 
 Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
     Volume<bool> volume(
-            side_length / (float) resolution,
             cv::Vec3d(-side_length / 2, -side_length / 2, 0),
             cv::Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
@@ -44,7 +43,7 @@ Matx44d generate_look_at_mat(const Vec3d &eye, const Vec3d &center, const Vec3d 
 Matx44d perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
     // assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
 
-    f32 const tanHalfFovy = tan(fovy / 2.0f);
+    f32 const tanHalfFovy = tan(fovy / 2.);
 
     Matx44d result;
     memset(&result, 0, sizeof(result));
@@ -58,7 +57,7 @@ Matx44d perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
 }
 
 Matx44d generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
-    obj_rotation = obj_rotation * M_PI / 180.0f;
+    obj_rotation = obj_rotation * M_PI / 180.;
     Vec3d eye    {offset_horiz, 0, offset_vert};
     Vec3d center {0, 0, 0};
     Vec3d up     {0, 0, 1};
@@ -86,7 +85,7 @@ Vec2d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Ma
     return Vec2d(intermediate[0], intermediate[1]);
 }
 
-Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
+Vec3d project_screen_point_to_3d(const Vec3d &pos, const Matx44d extrinsic, const Matx44d intrinsic) {
     Matx<double, 4, 3> our_intrinsic_inv;
     our_intrinsic_inv(0, 0) = 1 / intrinsic(0, 0);
     our_intrinsic_inv(1, 1) = 1 / intrinsic(1, 1);
@@ -96,7 +95,7 @@ Vec3d project_screen_point_to_3d(Vec3d pos, const Matx44d extrinsic, const Matx4
     return Vec3d(intermediate[0], intermediate[1], intermediate[2]);
 }
 
-void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
+void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint ind, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
     Image image = load_image(image_path);
     Image output_image{};
 
@@ -107,11 +106,13 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const
     for (int z = 0; z < volume->dz; ++z) {
         for (int y = 0; y < volume->dy; ++y) {
             for (int x = 0; x < volume->dx; ++x) {
+
                 Vec2d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
-                int p_x = (p[0] + 1.0f) / 2.0f * image.width;
-                int p_y = (p[1] + 1.0f) / 2.0f * image.height;
+                int p_x = (p[0] + 1.) / 2. * image.width;
+                int p_y = (p[1] + 1.) / 2. * image.height;
 
+                volume->projections[volume->getPosFromTuple(x, y, z)][ind] = Vec2i(p_x, p_y);
 
                 bool outside = image.at(p_x, p_y).r < 150;
                 if (outside) {
@@ -147,7 +148,7 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, const
 }
 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,
-                              bool carve_in_parallel, const std::function<void (const char*, Matx44d, Matx44d)> &onProcess)
+                              bool carve_in_parallel, const std::function<void (const char*, uint, Matx44d, Matx44d)> &onProcess)
 {
     char file_path[1024];
     sprintf(file_path, "%s/cam_info.txt", run_path);
@@ -178,7 +179,7 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
         std::cout << degrees << "  deg" << std::endl;
 
         sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
-        onProcess(file_path, view_mat, projection_mat);
+        onProcess(file_path, degrees_it, view_mat, projection_mat);
     }
     std::cout << "Done processing run " << run_path << std::endl;
 }
@@ -199,8 +200,8 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
 
     std::cout <<"Progress in runs:\n";
 
-    auto voxel_carve = [&](const char* file_path, Matx44d view_mat, Matx44d projection_mat) {
-        carve_using_singe_image(volume, file_path, view_mat, projection_mat, output_result_image);
+    auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat, Matx44d projection_mat) {
+        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image);
     };
 
     sprintf(file_path1, "%s/run_1", path_to_runs);

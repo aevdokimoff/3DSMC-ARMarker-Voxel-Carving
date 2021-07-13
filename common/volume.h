@@ -16,7 +16,7 @@ class Volume
 {
 public:
     Volume() = default;
-    Volume(double sideLength, const Vec3d& min_, const Vec3d& max_, uint resolution = 10);
+    Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10, uint number_of_images = 72);
 
 	inline void computeMinMaxValues(double& minVal, double& maxVal) const
 	{
@@ -116,6 +116,13 @@ public:
 	inline Vec3d getMin() { return v_min; }
 	inline Vec3d getMax() { return v_max; }
 
+	inline uint getInd(const Vec3d &point)
+    {
+	    return getPosFromTuple((point[0] - v_min[0]) * dx / (v_max[0] - v_min[0]),
+                            (point[1] - v_min[1]) * dy / (v_max[1] - v_min[1]),
+                            (point[2] - v_min[2]) * dz / (v_max[2] - v_min[2]));
+    }
+
 	//! Sets minimum extension
 	void SetMin(const Vec3d& min_);
 
@@ -140,7 +147,9 @@ public:
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
 	std::vector<T> vol;
-	double maxValue, minValue;
+    std::vector<std::vector<Vec2i>> projections;
+
+    double maxValue, minValue;
 	double sideLength;
 
     bool correctVoxel(int x, int y, int z);

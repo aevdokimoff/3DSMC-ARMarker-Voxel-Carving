@@ -33,6 +33,9 @@
 
 generate_scale
 voxel
+cmake-build-release
+cmake-build-debug
+.idea
 
 *.aux
 *.log

@@ -3,14 +3,17 @@
 #include <fstream>
 
 template <typename T>
-Volume<T>::Volume(double _sideLength, const Vec3d& min_, const Vec3d& max_, uint resolution) :
+Volume<T>::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution, uint number_of_images) :
     sideLength(sideLength), v_min(min_), v_max(max_)
 {
     diag = v_max - v_min;
 	dx = resolution;
 	dy = resolution;
 	dz = resolution;
-	vol = std::vector<T>((dx + 1) * (dy + 1) * (dz + 1));
+	int length = (dx + 1) * (dy + 1) * (dz + 1);
+	vol = std::vector<T>(length);
+	projections = std::vector<std::vector<Vec2i>>(length);
+    for (int i = 0; i < length; i++) projections[i] = std::vector<Vec2i>(number_of_images);
 
 	compute_ddx_dddx();
 }
@@ -74,6 +77,11 @@ bool Volume<T>::writeToFile(const std::string &filename) {
     outFile << vol.size() << std::endl; // int
     for (auto value: vol) outFile << value << ' '; //bool
 
+    outFile << projections[0].size() << std::endl; // int
+    for (const auto &images: projections)
+        for (auto projection: images)
+            outFile << projection[0] << ' ' << projection[1] << std::endl; // int
+
     outFile.close();
     return true;
 }
@@ -122,6 +130,18 @@ bool Volume<T>::readFromFile(const std::string &filename)
         vol.push_back(value);
     }
 
+    uint number_of_images;
+    inFile >> number_of_images; // int
+    for (int i = 0; i < size; i++)
+    {
+        projections.emplace_back();
+        for (int j = 0; j < number_of_images; j++)
+        {
+            int x, y;
+            inFile >> x >> y; // int
+            projections[i].push_back(Vec2d(x, y));
+        }
+    }
     inFile.close();
     return true;
 }
