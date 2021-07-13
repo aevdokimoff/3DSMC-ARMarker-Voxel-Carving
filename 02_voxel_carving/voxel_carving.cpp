@@ -3,16 +3,20 @@
 #include <cmath>
 #include <omp.h>
 #include <iostream>
+#include <mutex>
+#include <condition_variable>
 #include "../3rd_party_libs/stb/stb_image.h"
 #include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "voxel_carving.hpp"
 #include "image.h"
 
+std::mutex mutex;
+
 Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
     Volume<bool> volume(
-            cv::Vec3d(-side_length / 2, -side_length / 2, 0),
-            cv::Vec3d(side_length / 2, side_length / 2, side_length),
+            Vec3d(-side_length / 2, -side_length / 2, 0),
+            Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
     std::fill(volume.vol.begin(), volume.vol.end(), true);
     return volume;
@@ -116,6 +120,7 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint 
 
                 bool outside = image.at(p_x, p_y).r < 150;
                 if (outside) {
+                    std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
                     volume->set(x, y, z, false);
                 }
 
@@ -168,9 +173,9 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
     x_dist /= -100;
     z_dist /= 100;
 
-//    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
+    u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
-//#pragma omp parallel for num_threads(thread_count)
+#pragma omp parallel for num_threads(thread_count)
     for (int degrees_it = 0; degrees_it < 36; degrees_it++) {
         int degrees = degrees_it * 10;
 

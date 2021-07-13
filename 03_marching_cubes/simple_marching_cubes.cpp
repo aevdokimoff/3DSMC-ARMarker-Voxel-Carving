@@ -1,4 +1,7 @@
+#include <omp.h>
 #include "simple_marching_cubes.h"
+
+SimpleMarchingCubes::SimpleMarchingCubes(Volume<bool> *_volume) : MarchingCubes(_volume) {}
 
 void SimpleMarchingCubes::processVolume(SimpleMesh* mesh)
 {
@@ -8,32 +11,19 @@ void SimpleMarchingCubes::processVolume(SimpleMesh* mesh)
         {
             for (int z = 0; z < volume->getDimZ() - 1; z++)
             {
-                processVolumeCell(x, y, z, mesh);
+                processVolumeCell(x, y, z);
             }
         }
     }
+    fillMesh(mesh);
 }
 
-SimpleMarchingCubes::SimpleMarchingCubes(Volume<bool> *_volume) : MarchingCubes(_volume) {}
-
-void SimpleMarchingCubes::processVolumeCell(int x, int y, int z, SimpleMesh* mesh)
+void SimpleMarchingCubes::processVolumeCell(int x, int y, int z)
 {
-    GridCell<bool> cell;
-    fillCell(cell, x, y, z);
+    uint ind = volume->getPosFromTuple(x, y, z);
+    fillCell(grid[ind], x, y, z);
 
-    Triangle tris[6];
-    int numTris = polygonise(cell, tris);
-
-    if (numTris == 0) return;
-
-    for (int i1 = 0; i1 < numTris; i1++)
-    {
-        unsigned int vhandle[3];
-        vhandle[0] = mesh->addVertex(tris[i1].points[0]);
-        vhandle[1] = mesh->addVertex(tris[i1].points[1]);
-        vhandle[2] = mesh->addVertex(tris[i1].points[2]);
-        mesh->addFace(vhandle[0], vhandle[2], vhandle[1]);
-    }
+    polygonise(grid[ind]);
 }
 
 Vec3d SimpleMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2)
@@ -41,11 +31,8 @@ Vec3d SimpleMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2)
     return p1 + (p2 - p1) / 2;
 }
 
-int SimpleMarchingCubes::polygonise(GridCell<bool> &cell, Triangle* triangles)
+void SimpleMarchingCubes::polygonise(TriangulatedCell &cell)
 {
-    int ntriang;
-    Vec3d vertlist[12];
-
     int degree = 1;
     for (bool value : cell.values) {
         if (!value) cell.cubeIndex |= degree;
@@ -53,24 +40,15 @@ int SimpleMarchingCubes::polygonise(GridCell<bool> &cell, Triangle* triangles)
     }
 
     /* Cube is entirely in/out of the surface */
-    if (edgeTable[cell.cubeIndex] == 0) return 0;
+    if (edgeTable[cell.cubeIndex] == 0) return;
     degree = 1;
     for (int i = 0; i < 12; i++) {
-        if (edgeTable[cell.cubeIndex] & degree)
-            vertlist[i] = interpret(cell.corners[edges[i][0]], cell.corners[edges[i][1]]);
+        if (edgeTable[cell.cubeIndex] & degree) {
+            cell.hasIntersection[i] = true;
+            cell.intersections[i] = interpret(cell.corners[edges[i][0]], cell.corners[edges[i][1]]);
+        }
         degree <<= 1;
     }
-
-    /* Create the triangle */
-    ntriang = 0;
-    for (int i = 0; triTable[cell.cubeIndex][i] != -1; i += 3) {
-        triangles[ntriang].points[0] = vertlist[triTable[cell.cubeIndex][i]];
-        triangles[ntriang].points[1] = vertlist[triTable[cell.cubeIndex][i + 1]];
-        triangles[ntriang].points[2] = vertlist[triTable[cell.cubeIndex][i + 2]];
-        ntriang++;
-    }
-
-    return ntriang;
 }
 
 void MarchingCubes::fillCell(GridCell<bool> &cell, int x, int y, int z) {
@@ -93,4 +71,57 @@ void MarchingCubes::fillCell(GridCell<bool> &cell, int x, int y, int z) {
     cell.values[5] = volume->get(x, y, z + 1);
     cell.values[6] = volume->get(x, y + 1, z + 1);
     cell.values[7] = volume->get(x + 1, y + 1, z + 1);
+}
+
+void MarchingCubes::fillMesh(SimpleMesh *mesh)
+{
+    map<pair<uint, int>, uint> vertex_indices;
+
+    for (int x = 0; x < volume->getDimX() - 1; x++)
+    {
+        for (int y = 0; y < volume->getDimY() - 1; y++)
+        {
+            for (int z = 0; z < volume->getDimZ() - 1; z++)
+            {
+                uint ind = volume->getPosFromTuple(x, y, z);
+                int considered_edges[] = {7, 6, 11};
+                for (auto i: considered_edges)
+                {
+                    if (grid[ind].hasIntersection[i])
+                    {
+                        uint vertex_index = mesh->addVertex(grid[ind].intersections[i]);
+                        vertex_indices[pair<uint, int>(ind, i)] = vertex_index;
+                        for (int j = 0; j < 3; j++)
+                        {
+                            int neighbourX = edgeNeighbours[i][j][0] + x;
+                            int neighbourY = edgeNeighbours[i][j][1] + y;
+                            int neighbourZ = edgeNeighbours[i][j][2] + z;
+                            if (!volume->correctVoxel(neighbourX, neighbourY, neighbourZ)) continue;
+                            uint next_ind = volume->getPosFromTuple(neighbourX, neighbourY, neighbourZ);
+                            vertex_indices[pair<uint, int>(next_ind, edgeNeighbours[i][j][3])] = vertex_index;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cout << "Added all vertices to the mesh.\n";
+
+    for (int x = 0; x < volume->getDimX() - 1; x++)
+    {
+        for (int y = 0; y < volume->getDimY() - 1; y++)
+        {
+            for (int z = 0; z < volume->getDimZ() - 1; z++)
+            {
+                uint ind = volume->getPosFromTuple(x, y, z);
+                for (int i = 0; triTable[grid[ind].cubeIndex][i] != -1; i += 3) {
+                    uint ind3 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i])];
+                    uint ind2 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 1])];
+                    uint ind1 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 2])];
+                    mesh->addFace(ind1, ind2, ind3);
+                }
+            }
+        }
+    }
 }

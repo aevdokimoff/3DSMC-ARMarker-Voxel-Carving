@@ -11,6 +11,7 @@
 #include <utility>
 #include <map>
 #include <functional>
+#include <map>
 
 using namespace cv;
 using namespace std;
@@ -52,7 +53,10 @@ struct TriangulatedCell : GridCell<bool> {
 class MarchingCubes
 {
 public:
-    explicit MarchingCubes(Volume<bool> *_volume) : volume(_volume) {}
+    explicit MarchingCubes(Volume<bool> *_volume) : volume(_volume)
+    {
+        grid.resize(volume->getVoxelCnt());
+    }
     virtual void processVolume(SimpleMesh *mesh) = 0;
 protected:
     int edges[12][2] = {
@@ -381,20 +385,23 @@ protected:
     };
 
     Volume<bool> *volume;
+    vector<TriangulatedCell> grid;
+
     void fillCell(GridCell<bool> &cell, int x, int y, int z);
+    void fillMesh(SimpleMesh *mesh);
 private:
-    virtual void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) = 0;
+    virtual void processVolumeCell(int x, int y, int z) = 0;
 };
 
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
     explicit SimpleMarchingCubes(Volume<bool> *_volume);
-    void processVolume(SimpleMesh* mesh) override;
+    void processVolume(SimpleMesh *mesh) override;
 private:
-    void processVolumeCell(int x, int y, int z, SimpleMesh *mesh) override;
+    void processVolumeCell(int x, int y, int z) override;
     static Vec3d interpret(const Vec3d &p1, const Vec3d &p2);
-    int polygonise(GridCell<bool> &cell, Triangle *triangles);
+    void polygonise(TriangulatedCell &cell);
 };
 
 class ProjectedMarchingCubes : public MarchingCubes
@@ -403,10 +410,9 @@ public:
     explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath);
     void processVolume(SimpleMesh* pMesh) override;
 private:
-    vector<TriangulatedCell> grid;
     string dataPath;
 
-    void processVolumeCell(int x, int y, int z, SimpleMesh* mesh) override;
+    void processVolumeCell(int x, int y, int z) override;
     void markVertices(TriangulatedCell &cell);
     void processImages(const string& path);
     void projectPixels(TriangulatedCell &cell, const char *file_path, uint ind, Matx44d view_mat, Matx44d projection_mat);
@@ -414,7 +420,6 @@ private:
     void defineSurfaceLines(TriangulatedCell &cell);
     void computeSplitLine(TriangulatedCell &cell, int face, int edge1, int edge2);
     void postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh);
-    void writeMesh(TriangulatedCell &cell, SimpleMesh *pMesh);
 };
 
 #endif

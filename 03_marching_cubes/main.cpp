@@ -7,10 +7,14 @@
 
 #define OBJECT Object::owl
 
-#define WITH_VOXEL_CARVING false
-#define SAVE_VOLUME true
+#define WITH_VOXEL_CARVING true
+#define SAVE_VOLUME false
+#define CARVE_IN_PARALLEL true
+#define SAVE_RESULT_IMAGE false
 
-enum Object { owl, duck, unicorn};
+#define LOW_RESOLUTION false
+
+enum Object {owl, duck, unicorn};
 
 Volume<bool> getImplicitVolume(bool torus = true) {
     ImplicitSurface* surface;
@@ -55,7 +59,7 @@ int main(int argc, char *argv[]) {
             return 1;
     }
 
-    std::string outputFile = "./results/silhouette_" + name + ".off";
+    std::string outputFile = "./results/simple_" + name + (LOW_RESOLUTION ? "_low_resolution" : "") + ".off";
 
     Volume<bool> volume;
     if (USE_IMPLICIT_SURFACE)
@@ -65,8 +69,9 @@ int main(int argc, char *argv[]) {
     }
     else if (WITH_VOXEL_CARVING)
     {
-        volume = generate_point_cloud(10, 0.1);
-        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), true, false);
+        int resolution = LOW_RESOLUTION ? 20 : 100;
+        volume = generate_point_cloud(resolution, 0.1);
+        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), CARVE_IN_PARALLEL, SAVE_RESULT_IMAGE);
         if (SAVE_VOLUME) {
             volume.writeToFile("./results/volume_" + name + ".txt");
             volume.writePointCloudToFile("./results/point_cloud_" + name + ".ply");
@@ -78,8 +83,8 @@ int main(int argc, char *argv[]) {
     }
 
     SimpleMesh mesh;
-    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
-//    SimpleMarchingCubes marchingCubes(&volume);
+//    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
+    SimpleMarchingCubes marchingCubes(&volume);
     marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))

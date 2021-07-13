@@ -3,10 +3,7 @@
 #include <chrono> // debug
 using namespace chrono; // debug
 
-ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath) : MarchingCubes(_volume), dataPath(std::move(_dataPath))
-{
-    grid.resize(volume->getVoxelCnt());
-}
+ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath) : MarchingCubes(_volume), dataPath(std::move(_dataPath)) {}
 
 void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
 {
@@ -25,7 +22,7 @@ void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
         {
             for (int z = 0; z < volume->getDimZ() - 1; z++)
             {
-                processVolumeCell(x, y, z, nullptr);
+                processVolumeCell(x, y, z);
             }
         }
     }
@@ -49,7 +46,7 @@ void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
     }
 }
 
-void ProjectedMarchingCubes::processVolumeCell(int x, int y, int z, SimpleMesh* mesh)
+void ProjectedMarchingCubes::processVolumeCell(int x, int y, int z)
 {
     uint ind = volume->getPosFromTuple(x, y, z);
     fillCell(grid[ind], x, y, z);
@@ -257,19 +254,5 @@ void ProjectedMarchingCubes::postProcessVolumeCell(int x, int y, int z, SimpleMe
             grid[ind].intersections[edge] = furtherFrom(insideVertex, grid[ind].intersections[edge], grid[neighbourInd].intersections[neighbourEdge]);
             grid[neighbourInd].intersections[neighbourEdge] = grid[ind].intersections[edge];
         }
-    }
-    writeMesh(grid[ind], pMesh);
-}
-
-void ProjectedMarchingCubes::writeMesh(TriangulatedCell &cell, SimpleMesh *pMesh)
-{
-    for (int i = 0; triTable[cell.cubeIndex][i] != -1; i += 3)
-    {
-        unsigned int vhandle[3];
-        vhandle[0] = pMesh->addVertex(cell.intersections[triTable[cell.cubeIndex][i]]);
-        vhandle[1] = pMesh->addVertex(cell.intersections[triTable[cell.cubeIndex][i + 1]]);
-        vhandle[2] = pMesh->addVertex(cell.intersections[triTable[cell.cubeIndex][i + 2]]);
-
-        pMesh->addFace(vhandle[0], vhandle[1], vhandle[2]);
     }
 }
