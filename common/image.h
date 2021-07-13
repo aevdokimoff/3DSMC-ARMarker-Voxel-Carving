@@ -1,5 +1,5 @@
 #pragma once
-#include "common.h"
+#include "../3rd_party_libs/ftb/types.hpp" // for the short types
 
 struct Pixel {
     u8 r;

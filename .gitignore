@@ -31,6 +31,8 @@
 *.out
 *.app
 
+.DS_Store
+
 generate_scale
 voxel
 cmake-build-release
@@ -41,9 +43,11 @@ cmake-build-debug
 *.aux
 *.log
 
+build.sh
 *.png
 *.PNG
 *.JPG
 *.jpg
 *.dng
 *.DNG
+/build/

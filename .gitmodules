@@ -1,3 +1,6 @@
 [submodule "3rd_party_libs/stb"]
 	path = 3rd_party_libs/stb
 	url = https://github.com/nothings/stb
+[submodule "3rd_party_libs/ftb"]
+	path = 3rd_party_libs/ftb
+	url = https://github.com/FelixBrendel/ftb

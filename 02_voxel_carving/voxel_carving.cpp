@@ -2,13 +2,13 @@
 #include <cstring>
 #include <cmath>
 #include <omp.h>
+
 #include <iostream>
 #include <mutex>
 #include <condition_variable>
-#include "../3rd_party_libs/stb/stb_image.h"
-#include "../3rd_party_libs/stb/stb_image_write.h"
 
 #include "voxel_carving.hpp"
+#include "common.h"
 #include "image.h"
 
 std::mutex mutex;
@@ -20,83 +20,6 @@ Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
             resolution);
     std::fill(volume.vol.begin(), volume.vol.end(), true);
     return volume;
-}
-
-Matx44d generate_look_at_mat(const Vec3d &eye, const Vec3d &center, const Vec3d &up) {
-    Vec3d f = normalize(eye - center);
-    Vec3d s = normalize(f.cross(up));
-    Vec3d u = s.cross(f);
-
-    Matx44d result = Matx44d::eye();
-    result(0, 0) = s[0];
-    result(0, 1) = s[1];
-    result(0, 2) = s[2];
-    result(1, 0) = u[0];
-    result(1, 1) = u[1];
-    result(1, 2) = u[2];
-    result(2, 0) = -f[0];
-    result(2, 1) = -f[1];
-    result(2, 2) = -f[2];
-    result(0, 3) = -s.dot(eye);
-    result(1, 3) = -u.dot(eye);
-    result(2, 3) = f.dot(eye);
-
-    return result;
-}
-
-Matx44d perspectiveRH_ZO(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
-    // assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
-
-    f32 const tanHalfFovy = tan(fovy / 2.);
-
-    Matx44d result;
-    memset(&result, 0, sizeof(result));
-
-    result(0, 0) = 1.0 / (aspect * tanHalfFovy);
-    result(1, 1) = 1.0 / (tanHalfFovy);
-    result(2, 2) = zFar / (zNear - zFar);
-    result(3, 2) = -1.0;
-    result(2, 3) = -(zFar * zNear) / (zFar - zNear);
-    return result;
-}
-
-Matx44d generate_extrinsic_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
-    obj_rotation = obj_rotation * M_PI / 180.;
-    Vec3d eye    {offset_horiz, 0, offset_vert};
-    Vec3d center {0, 0, 0};
-    Vec3d up     {0, 0, 1};
-
-    Matx33d rot_z = generate_z_rot_mat(obj_rotation);
-    eye = rot_z * eye;
-
-
-    return generate_look_at_mat(eye, center, up);
-}
-
-Vec2d project_point_to_screen_space(Vec3d pos, const Matx44d extrinsic, const Matx44d intrinsic) {
-    Matx<double, 3, 4> our_intrinsic;
-    our_intrinsic(0, 0) = intrinsic(0, 0);
-    our_intrinsic(1, 1) = intrinsic(1, 1);
-    our_intrinsic(2, 2) = 1;
-
-    Matx<double, 3, 4> ourTemp = our_intrinsic * extrinsic; //[3x4]  = our_intrinsic * extrinsic
-
-    Vec4d pos4d(pos[0], pos[1], pos[2], 1);
-    Vec3d intermediate = ourTemp * pos4d;
-
-    intermediate = -intermediate / intermediate[2];
-
-    return Vec2d(intermediate[0], intermediate[1]);
-}
-
-Vec3d project_screen_point_to_3d(const Vec3d &pos, const Matx44d extrinsic, const Matx44d intrinsic) {
-    Matx<double, 4, 3> our_intrinsic_inv;
-    our_intrinsic_inv(0, 0) = 1 / intrinsic(0, 0);
-    our_intrinsic_inv(1, 1) = 1 / intrinsic(1, 1);
-    our_intrinsic_inv(2, 2) = 1;
-
-    Vec4d intermediate = extrinsic.inv() * our_intrinsic_inv * pos;
-    return Vec3d(intermediate[0], intermediate[1], intermediate[2]);
 }
 
 void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint ind, const Matx44d &view_mat, const Matx44d &proj_mat, bool output_result_image = false) {
@@ -155,56 +78,33 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,
                               bool carve_in_parallel, const std::function<void (const char*, uint, Matx44d, Matx44d)> &onProcess)
 {
-    char file_path[1024];
-    sprintf(file_path, "%s/cam_info.txt", run_path);
-
-    f32 x_dist;
-    f32 z_dist;
-
-    FILE* conf_file = fopen(file_path, "r");
-    if (!conf_file) {
-        fprintf(stderr, "The cam info file was not found in %s.\n", file_path);
-        return;
-    }
-    fscanf(conf_file, "x_dist = %f cm\n", &x_dist);
-    fscanf(conf_file, "z_dist = %f cm\n", &z_dist);
-    fclose(conf_file);
-
-    x_dist /= -100;
-    z_dist /= 100;
-
+    Vec3d cam_pos = get_cam_pos_for_run(run_path);
     u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
-#pragma omp parallel for num_threads(thread_count)
+    #pragma omp parallel for num_threads(thread_count)
     for (int degrees_it = 0; degrees_it < 36; degrees_it++) {
         int degrees = degrees_it * 10;
 
-        Matx44d view_mat = generate_extrinsic_mat(x_dist, z_dist, degrees);
+        printf("\r %03d deg", degrees);
+        fflush(stdout);
 
-        std::cout << degrees << "  deg" << std::endl;
+        Matx44d view_mat = generate_view_mat(cam_pos, degrees);
 
         char image_path[1024];
         sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);
         onProcess(image_path, degrees_it, view_mat, projection_mat);
     }
-    std::cout << "Done processing run " << run_path << std::endl;
-}
-
-Matx44d getProjectionMatrix() {
-    f32 y_fov = 0.3503711;
-    f32 aspect = 1.509804;
-    f32 zNear = 0.3;
-    f32 zFar = 200;
-    return perspectiveRH_ZO(y_fov, aspect, zNear, zFar);
+    printf("\rDone processing run %s\n", run_path);
 }
 
 void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_parallel, bool output_result_image) {
     static char file_path1[1024];
     static char file_path2[1024];
 
-    Matx44d proj_mat = getProjectionMatrix();
+    Matx44d proj_mat = generate_our_proj_mat();
 
-    std::cout <<"Progress in runs:\n";
+    printf("Progress in runs:\n");
+    fflush(stdout);
 
     auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat, Matx44d projection_mat) {
         carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image);
