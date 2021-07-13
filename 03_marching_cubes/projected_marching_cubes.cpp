@@ -1,9 +1,11 @@
 #include "simple_marching_cubes.h"
 
 #include <chrono> // debug
+#include <omp.h>
+
 using namespace chrono; // debug
 
-ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath) : MarchingCubes(_volume), dataPath(std::move(_dataPath)) {}
+ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath, bool _in_parallel) : MarchingCubes(_volume, _in_parallel), dataPath(std::move(_dataPath)) {}
 
 void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
 {
@@ -16,6 +18,9 @@ void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
     //      linear regression, compute segment
     //      intersect segment with border (for one vertex select the further point)
 
+    u32 thread_count = (in_parallel) ? omp_get_max_threads() : 1;
+
+    #pragma omp parallel for num_threads(thread_count)
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
         for (int y = 0; y < volume->getDimY() - 1; y++)
@@ -30,20 +35,24 @@ void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
     processImages(dataPath + "/run_1");
     processImages(dataPath + "/run_2");
 
-    for (int ind = 0; ind < grid.size(); ind++) {
-        defineSurfaceLines(grid[ind]);
+    #pragma omp parallel for num_threads(thread_count)
+    for (auto & ind : grid) {
+        defineSurfaceLines(ind);
     }
 
+    #pragma omp parallel for num_threads(thread_count)
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
         for (int y = 0; y < volume->getDimY() - 1; y++)
         {
             for (int z = 0; z < volume->getDimZ() - 1; z++)
             {
-                postProcessVolumeCell(x, y, z, pMesh);
+                postProcessVolumeCell(x, y, z);
             }
         }
     }
+
+    fillMesh(pMesh);
 }
 
 void ProjectedMarchingCubes::processVolumeCell(int x, int y, int z)
@@ -221,14 +230,16 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
                 }
                 if (intersection[2] >= cell.corners[faces[i][1]][2] && intersection[2] <= cell.corners[faces[i][7]][2] &&
                         intersection[1] >= cell.corners[faces[i][1]][1] && intersection[1] <= cell.corners[faces[i][7]][1] &&
-                        intersection[0] >= cell.corners[faces[i][1]][0] && intersection[0] <= cell.corners[faces[i][7]][0])
+                        intersection[0] >= cell.corners[faces[i][1]][0] && intersection[0] <= cell.corners[faces[i][7]][0]) {
+                    unique_lock<std::mutex> lock(marching_cubes_mutex);
                     cell.sideIntersections->push_back(intersection);
+                }
             }
         }
     }
 }
 
-void ProjectedMarchingCubes::postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh)
+void ProjectedMarchingCubes::postProcessVolumeCell(int x, int y, int z)
 {
     uint ind = volume->getPosFromTuple(x, y, z);
 
@@ -251,6 +262,7 @@ void ProjectedMarchingCubes::postProcessVolumeCell(int x, int y, int z, SimpleMe
             int neighbourEdge = edgeNeighbours[i][j][3];
 
             Vec3d insideVertex = grid[ind].values[edges[edge][0]] ? grid[ind].corners[edges[edge][0]] : grid[ind].corners[edges[edge][1]];
+            unique_lock<std::mutex> lock(marching_cubes_mutex);
             grid[ind].intersections[edge] = furtherFrom(insideVertex, grid[ind].intersections[edge], grid[neighbourInd].intersections[neighbourEdge]);
             grid[neighbourInd].intersections[neighbourEdge] = grid[ind].intersections[edge];
         }

@@ -9,7 +9,7 @@
 
 #define WITH_VOXEL_CARVING true
 #define SAVE_VOLUME false
-#define CARVE_IN_PARALLEL true
+#define IN_PARALLEL true
 #define SAVE_RESULT_IMAGE false
 
 #define LOW_RESOLUTION false
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     {
         int resolution = LOW_RESOLUTION ? 20 : 100;
         volume = generate_point_cloud(resolution, 0.1);
-        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), CARVE_IN_PARALLEL, SAVE_RESULT_IMAGE);
+        voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), IN_PARALLEL, SAVE_RESULT_IMAGE);
         if (SAVE_VOLUME) {
             volume.writeToFile("./results/volume_" + name + ".txt");
             volume.writePointCloudToFile("./results/point_cloud_" + name + ".ply");
@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
     }
 
     SimpleMesh mesh;
-//    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name);
-    SimpleMarchingCubes marchingCubes(&volume);
+//    ProjectedMarchingCubes marchingCubes(&volume, "../01_data_acquisition/images/obj_" + name, IN_PARALLEL);
+    SimpleMarchingCubes marchingCubes(&volume, IN_PARALLEL);
     marchingCubes.processVolume(&mesh);
 
     if (!mesh.writeMesh(outputFile))

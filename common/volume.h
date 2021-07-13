@@ -5,6 +5,7 @@
 #include <opencv2/core/mat.hpp>
 #include "common.h"
 #include <vector>
+#include <mutex>
 
 typedef unsigned int uint;
 

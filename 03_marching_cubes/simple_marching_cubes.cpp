@@ -1,10 +1,14 @@
 #include <omp.h>
 #include "simple_marching_cubes.h"
 
-SimpleMarchingCubes::SimpleMarchingCubes(Volume<bool> *_volume) : MarchingCubes(_volume) {}
+SimpleMarchingCubes::SimpleMarchingCubes(Volume<bool> *_volume, bool _in_parallel) : MarchingCubes(_volume, _in_parallel) {}
 
-void SimpleMarchingCubes::processVolume(SimpleMesh* mesh)
+void SimpleMarchingCubes::processVolume(SimpleMesh *mesh)
 {
+    cout << "Started the algorithm.\n";
+    u32 thread_count = (in_parallel) ? omp_get_max_threads() : 1;
+
+    #pragma omp parallel for num_threads(thread_count)
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
         for (int y = 0; y < volume->getDimY() - 1; y++)
@@ -15,6 +19,7 @@ void SimpleMarchingCubes::processVolume(SimpleMesh* mesh)
             }
         }
     }
+    cout << "Finished the algorithm.\n";
     fillMesh(mesh);
 }
 
@@ -77,6 +82,10 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
 {
     map<pair<uint, int>, uint> vertex_indices;
 
+    u32 thread_count = (in_parallel) ? omp_get_max_threads() : 1;
+    int considered_edges[] = {7, 6, 11};
+
+    #pragma omp parallel for num_threads(thread_count)
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
         for (int y = 0; y < volume->getDimY() - 1; y++)
@@ -84,13 +93,17 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
             for (int z = 0; z < volume->getDimZ() - 1; z++)
             {
                 uint ind = volume->getPosFromTuple(x, y, z);
-                int considered_edges[] = {7, 6, 11};
                 for (auto i: considered_edges)
                 {
                     if (grid[ind].hasIntersection[i])
                     {
-                        uint vertex_index = mesh->addVertex(grid[ind].intersections[i]);
+                        uint vertex_index;
+                        {
+                            unique_lock<std::mutex> lock(marching_cubes_mutex);
+                            vertex_index = mesh->addVertex(grid[ind].intersections[i]);
+                        }
                         vertex_indices[pair<uint, int>(ind, i)] = vertex_index;
+
                         for (int j = 0; j < 3; j++)
                         {
                             int neighbourX = edgeNeighbours[i][j][0] + x;
@@ -108,6 +121,7 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
 
     cout << "Added all vertices to the mesh.\n";
 
+    #pragma omp parallel for num_threads(thread_count)
     for (int x = 0; x < volume->getDimX() - 1; x++)
     {
         for (int y = 0; y < volume->getDimY() - 1; y++)
@@ -119,6 +133,8 @@ void MarchingCubes::fillMesh(SimpleMesh *mesh)
                     uint ind3 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i])];
                     uint ind2 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 1])];
                     uint ind1 = vertex_indices[pair<uint, int>(ind, triTable[grid[ind].cubeIndex][i + 2])];
+
+                    unique_lock<std::mutex> lock(marching_cubes_mutex);
                     mesh->addFace(ind1, ind2, ind3);
                 }
             }

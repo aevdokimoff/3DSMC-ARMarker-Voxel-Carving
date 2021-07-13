@@ -16,6 +16,8 @@
 using namespace cv;
 using namespace std;
 
+mutex marching_cubes_mutex;
+
 struct Triangle {
     Vec3d points[3]{};
 
@@ -53,7 +55,7 @@ struct TriangulatedCell : GridCell<bool> {
 class MarchingCubes
 {
 public:
-    explicit MarchingCubes(Volume<bool> *_volume) : volume(_volume)
+    explicit MarchingCubes(Volume<bool> *_volume, bool _in_parallel = false) : volume(_volume), in_parallel(_in_parallel)
     {
         grid.resize(volume->getVoxelCnt());
     }
@@ -384,6 +386,7 @@ protected:
             {{1, 0, 0, 10}, {0, 1, 0, 8}, {1, 1, 0, 9}},
     };
 
+    bool in_parallel;
     Volume<bool> *volume;
     vector<TriangulatedCell> grid;
 
@@ -396,7 +399,7 @@ private:
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
-    explicit SimpleMarchingCubes(Volume<bool> *_volume);
+    explicit SimpleMarchingCubes(Volume<bool> *_volume, bool _in_parallel = false);
     void processVolume(SimpleMesh *mesh) override;
 private:
     void processVolumeCell(int x, int y, int z) override;
@@ -407,7 +410,7 @@ private:
 class ProjectedMarchingCubes : public MarchingCubes
 {
 public:
-    explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath);
+    explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath, bool _in_parallel = false);
     void processVolume(SimpleMesh* pMesh) override;
 private:
     string dataPath;
@@ -419,7 +422,7 @@ private:
 
     void defineSurfaceLines(TriangulatedCell &cell);
     void computeSplitLine(TriangulatedCell &cell, int face, int edge1, int edge2);
-    void postProcessVolumeCell(int x, int y, int z, SimpleMesh *pMesh);
+    void postProcessVolumeCell(int x, int y, int z);
 };
 
 #endif

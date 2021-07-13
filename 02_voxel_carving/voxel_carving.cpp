@@ -120,7 +120,7 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint 
 
                 bool outside = image.at(p_x, p_y).r < 150;
                 if (outside) {
-                    std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+                    std::unique_lock<std::mutex> lock(mutex);
                     volume->set(x, y, z, false);
                 }
 
@@ -183,8 +183,9 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
 
         std::cout << degrees << "  deg" << std::endl;
 
-        sprintf(file_path, "%s/bw/%03d.jpg", run_path, degrees);
-        onProcess(file_path, degrees_it, view_mat, projection_mat);
+        char image_path[1024];
+        sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);
+        onProcess(image_path, degrees_it, view_mat, projection_mat);
     }
     std::cout << "Done processing run " << run_path << std::endl;
 }
