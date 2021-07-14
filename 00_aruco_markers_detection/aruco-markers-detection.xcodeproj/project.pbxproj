@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AC2F1065262EF25A0082C429 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC2F1064262EF25A0082C429 /* main.cpp */; };
+		AC10E1DC269F5BA30042070D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC10E1DB269F5BA30042070D /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,9 +23,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AC10E1DB269F5BA30042070D /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = SOURCE_ROOT; };
 		AC279F95267F8FBC00A5F158 /* calibration_params.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = calibration_params.yml; sourceTree = "<group>"; };
 		AC2F1061262EF25A0082C429 /* aruco-markers-detection */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "aruco-markers-detection"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC2F1064262EF25A0082C429 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		AC2F1079262EF6E10082C429 /* opecv-test-2.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "opecv-test-2.entitlements"; sourceTree = "<group>"; };
 		ACD143F62638120E00FE8FCC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACD144072638174700FE8FCC /* MarkerMovie.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = MarkerMovie.mp4; sourceTree = "<group>"; };
@@ -63,7 +63,7 @@
 			children = (
 				AC2F1079262EF6E10082C429 /* opecv-test-2.entitlements */,
 				ACD144072638174700FE8FCC /* MarkerMovie.mp4 */,
-				AC2F1064262EF25A0082C429 /* main.cpp */,
+				AC10E1DB269F5BA30042070D /* main.cpp */,
 				AC279F95267F8FBC00A5F158 /* calibration_params.yml */,
 				ACD143F62638120E00FE8FCC /* Info.plist */,
 			);
@@ -149,7 +149,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC2F1065262EF25A0082C429 /* main.cpp in Sources */,
+				AC10E1DC269F5BA30042070D /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

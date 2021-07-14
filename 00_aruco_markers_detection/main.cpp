@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
-#include "../../3rd_party_libs/opencv3.4/include/opencv2/core/utility.hpp"
+#include "../3rd_party_libs/opencv3.4/include/opencv2/core/utility.hpp"
 
 using namespace cv;
 using namespace std;
@@ -28,7 +28,6 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
     detectMarkers(image, dictionary, corners, ids);
     // if at least one marker detected
     if (ids.size() > 0) {
-        cout << ids.size();
         aruco::drawDetectedMarkers(imageCopy, corners, ids);
         vector<cv::Vec3d> rvecs, tvecs; // rotation and translation vectors -> camera pose
         aruco::estimatePoseSingleMarkers(corners, 0.05, cameraMatrix, distCoeffs, rvecs, tvecs);
@@ -52,8 +51,8 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
 }
 
 int main() {
-    string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/aruco_markers_detection/opecv-test-2/calibration_params.yml";
-    string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/aruco_markers_detection/opecv-test-2/markers_side.jpg";
+    string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/opecv-test-2/calibration_params.yml";
+    string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/opecv-test-2/markers_side.jpg";
     double horizontal_offset, vertical_offset;
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(image_path, calibration_params);
     cout << horizontal_offset << ',' << vertical_offset << endl;
