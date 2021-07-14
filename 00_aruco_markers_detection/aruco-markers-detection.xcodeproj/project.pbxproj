@@ -24,9 +24,9 @@
 
 /* Begin PBXFileReference section */
 		AC10E1DB269F5BA30042070D /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = SOURCE_ROOT; };
+		AC10E1DE269F5F440042070D /* aruco-markers-detection.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "aruco-markers-detection.entitlements"; sourceTree = "<group>"; };
 		AC279F95267F8FBC00A5F158 /* calibration_params.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = calibration_params.yml; sourceTree = "<group>"; };
 		AC2F1061262EF25A0082C429 /* aruco-markers-detection */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "aruco-markers-detection"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC2F1079262EF6E10082C429 /* opecv-test-2.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "opecv-test-2.entitlements"; sourceTree = "<group>"; };
 		ACD143F62638120E00FE8FCC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACD144072638174700FE8FCC /* MarkerMovie.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = MarkerMovie.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -45,7 +45,7 @@
 		AC2F1058262EF25A0082C429 = {
 			isa = PBXGroup;
 			children = (
-				AC2F1063262EF25A0082C429 /* opecv-test-2 */,
+				AC2F1063262EF25A0082C429 /* aruco-markers-detection */,
 				AC2F1062262EF25A0082C429 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -58,16 +58,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AC2F1063262EF25A0082C429 /* opecv-test-2 */ = {
+		AC2F1063262EF25A0082C429 /* aruco-markers-detection */ = {
 			isa = PBXGroup;
 			children = (
-				AC2F1079262EF6E10082C429 /* opecv-test-2.entitlements */,
+				AC10E1DE269F5F440042070D /* aruco-markers-detection.entitlements */,
 				ACD144072638174700FE8FCC /* MarkerMovie.mp4 */,
 				AC10E1DB269F5BA30042070D /* main.cpp */,
 				AC279F95267F8FBC00A5F158 /* calibration_params.yml */,
 				ACD143F62638120E00FE8FCC /* Info.plist */,
 			);
-			path = "opecv-test-2";
+			path = "aruco-markers-detection";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -276,14 +276,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = "opecv-test-2/opecv-test-2.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "aruco-markers-detection/aruco-markers-detection.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = 2DC3L9V65W;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = /usr/local/include;
 				INFOPLIST_FILE = "";
-				"INFOPLIST_FILE[sdk=*]" = "opecv-test-2/Info.plist";
+				"INFOPLIST_FILE[sdk=*]" = "aruco-markers-detection/Info.plist";
 				INFOPLIST_PREPROCESS = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -349,14 +349,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = "opecv-test-2/opecv-test-2.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "aruco-markers-detection/aruco-markers-detection.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = 2DC3L9V65W;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HEADER_SEARCH_PATHS = /usr/local/include;
 				INFOPLIST_FILE = "";
-				"INFOPLIST_FILE[sdk=*]" = "opecv-test-2/Info.plist";
+				"INFOPLIST_FILE[sdk=*]" = "aruco-markers-detection/Info.plist";
 				INFOPLIST_PREPROCESS = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

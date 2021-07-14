@@ -51,8 +51,8 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
 }
 
 int main() {
-    string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/opecv-test-2/calibration_params.yml";
-    string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/opecv-test-2/markers_side.jpg";
+    string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/calibration_params.yml";
+    string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/markers_side.jpg";
     double horizontal_offset, vertical_offset;
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(image_path, calibration_params);
     cout << horizontal_offset << ',' << vertical_offset << endl;
