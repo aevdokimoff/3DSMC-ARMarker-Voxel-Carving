@@ -10,7 +10,6 @@ using namespace std;
 
 tuple<double, double> horizontalVerticalOffset(string image_path, string calibration_params) {
     cv::Mat cameraMatrix, distCoeffs;
-    // change it to your path
     cv::FileStorage fs(calibration_params, cv::FileStorage::READ);
     
     fs["camera_matrix"] >> cameraMatrix;
