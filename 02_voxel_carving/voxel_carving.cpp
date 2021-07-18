@@ -66,7 +66,9 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint 
         char file_name[1024];
         sprintf(file_name, "%s_carved.png", image_path);
         store_image_as_png(output_image, file_name);
+        free_image(output_image);
     }
+    free_image(image);
 }
 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,

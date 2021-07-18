@@ -37,6 +37,7 @@ Image load_image(const char* path) {
     return image;
 }
 
-Image::~Image() {
-    stbi_image_free(pixels);
+void free_image(Image image) {
+    stbi_image_free(image.pixels);
+    image.pixels = nullptr;
 }

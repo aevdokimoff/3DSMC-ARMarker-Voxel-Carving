@@ -15,8 +15,6 @@ struct Image {
     Pixel& at(u32 x, u32 y) const {
         return pixels[(x + y * width)];
     }
-
-    ~Image();
 };
 
 Image load_image(const char* path);
