@@ -82,7 +82,7 @@ auto read_entire_file(const char* filename) -> Ftb_String {
     closeFile:
         fclose(fp);
     } else {
-        fprintf(stderr, "Cannot read file: %s", filename);
+        fprintf(stderr, "Cannot read file: %s\n", filename);
         return {};
     }
 

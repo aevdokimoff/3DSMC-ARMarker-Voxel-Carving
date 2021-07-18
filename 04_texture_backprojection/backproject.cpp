@@ -111,11 +111,16 @@ void create_image_texture(const char* runs_path, const char* obj_path,
                mesh->indices[i+2],
                mesh->indices.count);
 
+        Vertex tri_verts[3] = {
+            mesh->vertices[mesh->indices[i+0]],
+            mesh->vertices[mesh->indices[i+1]],
+            mesh->vertices[mesh->indices[i+2]],
+        };
 
         Vec3d average_normal =
-            normalize(mesh->vertices[i+0].normal +
-                      mesh->vertices[i+1].normal +
-                      mesh->vertices[i+2].normal);
+            normalize(tri_verts[0].normal +
+                      tri_verts[1].normal +
+                      tri_verts[2].normal);
 
 
         char* best_image_path;
@@ -130,22 +135,22 @@ void create_image_texture(const char* runs_path, const char* obj_path,
         
         V2_Triangle image_space_triangle;
         image_space_triangle.a = {
-            mesh->vertices[i+0].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+0].uv_coord[1] * (f32)image_texture.height
+            tri_verts[0].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[0].uv_coord[1] * (f32)image_texture.height
         };
         image_space_triangle.b = {
-            mesh->vertices[i+1].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+1].uv_coord[1] * (f32)image_texture.height
+            tri_verts[1].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[1].uv_coord[1] * (f32)image_texture.height
         };
         image_space_triangle.c =  {
-            mesh->vertices[i+2].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+2].uv_coord[1] * (f32)image_texture.height
+            tri_verts[2].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[2].uv_coord[1] * (f32)image_texture.height
         };
 
         V2_Triangle camera_space_triangle {
-            project_point_to_screen_space(mesh->vertices[i+0].pos, camera_mat, proj_mat),
-            project_point_to_screen_space(mesh->vertices[i+1].pos, camera_mat, proj_mat),
-            project_point_to_screen_space(mesh->vertices[i+2].pos, camera_mat, proj_mat)
+            project_point_to_screen_space(tri_verts[0].pos, camera_mat, proj_mat),
+            project_point_to_screen_space(tri_verts[1].pos, camera_mat, proj_mat),
+            project_point_to_screen_space(tri_verts[2].pos, camera_mat, proj_mat)
         };
         camera_space_triangle.a[0] =(camera_space_triangle.a[0] + 1.0f) / 2.0f * camera_image.width;
         camera_space_triangle.a[1] =(camera_space_triangle.a[1] + 1.0f) / 2.0f * camera_image.height;
@@ -207,7 +212,7 @@ void print_usage() {
 }
 
 s32 main(s32 arg_count, char* arg_values[]) {
-    /*if (arg_count != 5) {
+    if (arg_count != 5) {
         print_usage();
         return 1;
     }
@@ -218,7 +223,6 @@ s32 main(s32 arg_count, char* arg_values[]) {
         return 1;
     }
     
-    create_image_texture(arg_values[1], arg_values[2], arg_values[3], res);*/
-    create_image_texture("01_data_acquisition/images/obj_owl", "simple_owl_processed.obj", "res1.png", 4096);
+    create_image_texture(arg_values[1], arg_values[2], arg_values[3], res);
     return 0;
 }
