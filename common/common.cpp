@@ -32,8 +32,9 @@ Matx44d generate_proj_mat(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
 
 Matx44d generate_our_proj_mat() {
     f32 y_fov = 0.3503711;
+    // f32 y_fov = 0.4;
     f32 aspect = 1.509804;
-    Matx44d proj_mat = generate_proj_mat(y_fov, aspect, 0.3, 200);
+    Matx44d proj_mat = generate_proj_mat(y_fov, aspect, 0.3, 1);
     return proj_mat;
 }
 
@@ -59,14 +60,33 @@ Matx44d generate_look_at_mat(const Vec3d &eye, const Vec3d &center, const Vec3d 
     return result;
 }
 
-Matx44d generate_view_mat(f32 offset_horiz, f32 offset_vert, f32 obj_rotation) {
+Matx44d generate_view_mat(f32 offset_horiz, f32 offset_vert,
+                          f32 obj_rotation, Vec2d obj_translation)
+{
     obj_rotation = obj_rotation * M_PI / 180.0f;
-    Vec3d eye    {offset_horiz, 0, offset_vert};
-    Vec3d center {0, 0, 0};
-    Vec3d up     {0, 0, 1};
+    Vec3d eye    { offset_horiz, 0, offset_vert };
+    Vec3d center { 0, 0, 0 };
+    Vec3d up     { 0, 0, 1 };
+
 
     Matx33d rot_z = generate_z_rot_mat(obj_rotation);
     eye = rot_z * eye;
+
+    Vec3d offset {
+        obj_translation[0] * (1-cos(obj_rotation))/2,
+        0, 0
+    };
+
+    eye += offset;
+    center += offset;
+
+    f32 desired_dist = sqrt(offset_horiz*offset_horiz + offset_vert*offset_vert);
+    f32 actual_dist =
+        sqrt(eye[0]*eye[0]+
+             eye[1]*eye[1]+
+             eye[2]*eye[2]);
+
+    // eye = eye * (desired_dist/actual_dist);
 
     return generate_look_at_mat(eye, center, up);
 }

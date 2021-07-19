@@ -57,9 +57,9 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
         ? cam_pos_run_1[2]
         : cam_pos_run_2[2];
 
-    *out_camera_mat = generate_view_mat(max_dot_offset_horiz,
-                                              max_dot_offset_vert,
-                                              max_dot_degrees);
+    // *out_camera_mat = generate_view_mat(max_dot_offset_horiz,
+                                              // max_dot_offset_vert,
+                                              // max_dot_degrees);
     print_to_string(out_image_path, "run_%d/rgb/%03d.jpg", max_dot_run, max_dot_degrees);
 
 }

@@ -5,13 +5,12 @@
 #define USE_IMPLICIT_SURFACE false
 #define TORUS true
 
-#define OBJECT Object::owl
+#define OBJECT Object::unicorn
 
 #define WITH_VOXEL_CARVING true
 #define SAVE_VOLUME false
 #define IN_PARALLEL true
-#define SAVE_RESULT_IMAGE false
-
+#define SAVE_RESULT_IMAGE true
 #define LOW_RESOLUTION false
 
 enum Object {owl, duck, unicorn};
@@ -69,7 +68,7 @@ int main(int argc, char *argv[]) {
     }
     else if (WITH_VOXEL_CARVING)
     {
-        int resolution = LOW_RESOLUTION ? 20 : 100;
+        int resolution = LOW_RESOLUTION ? 20 : 201;
         volume = generate_point_cloud(resolution, 0.1);
         voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), IN_PARALLEL, SAVE_RESULT_IMAGE);
         if (SAVE_VOLUME) {
