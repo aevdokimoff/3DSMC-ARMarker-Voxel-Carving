@@ -25,17 +25,28 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
     vector<int> ids;
     vector<vector<Point2f>> corners;
     detectMarkers(image, dictionary, corners, ids);
+    
     // if at least one marker detected
     if (ids.size() > 0) {
         aruco::drawDetectedMarkers(imageCopy, corners, ids);
-        vector<cv::Vec3d> rvecs, tvecs; // rotation and translation vectors -> camera pose
+        vector<cv::Vec3d> rvecs, tvecs;
         aruco::estimatePoseSingleMarkers(corners, 0.0975, cameraMatrix, distCoeffs, rvecs, tvecs);
         Vec3d rvec = rvecs[0];
         Vec3d tvec = tvecs[0];
+        
+        // https://stackoverflow.com/questions/51476702/pose-of-camera-from-the-pose-of-marker
+        Mat R;
+        cv::Rodrigues(rvec, R); // calculate object pose R matrix
+        Mat camR = R.t();  // calculate camera R matrix
+        Mat camRvec;
+        Rodrigues(R, camRvec); // calculate camera rvec
+        Mat camTvec= -camR * tvec; // calculate camera translation vector
+        Vec3d camTvecArr((double*)camTvec.data);
+        
         // draw axis for the first detected marker
         aruco::drawAxis(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
-        double vertical_offset = tvec[2];
-        double horizontal_offset = sqrt(pow(tvec(0), 2) + pow(tvec(1), 2));
+        double vertical_offset = camTvecArr[2];
+        double horizontal_offset = sqrt(pow(camTvecArr(0), 2) + pow(camTvecArr(1), 2));
         
         imshow("Display window", imageCopy);
         int k = waitKey(0);
@@ -51,35 +62,10 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
 
 int main() {
     string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/calibration_params.yml";
-//    string image_path = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/markers_side.jpg";
     
-//    inputs:
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_duck/run_1/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_duck/run_2/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_owl/run_1/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_owl/run_2/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_unicorn/run_1/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/obj_unicorn/run_2/marker.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/markers_side.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker1.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker2.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker3.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker4.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker5.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker6.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker7.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker8.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/marker9.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/markers_side.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/original.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/original-no_white_border.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/original-no_white_border_flat.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/new.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/new2.jpg
-//    /Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/new3.jpg
-    
+//    x_dist = 62 cm; z_dist = 48 cm
     double horizontal_offset, vertical_offset;
-    string input = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/original-no_white_border.jpg";
+    string input = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/correct-rotation-2.jpg";
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(input, calibration_params);
     cout << horizontal_offset << ',' << vertical_offset << endl;
 }
