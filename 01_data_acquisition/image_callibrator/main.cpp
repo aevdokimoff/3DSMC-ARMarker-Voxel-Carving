@@ -46,7 +46,7 @@ int main()
 		else
 		{
 			Mat view_gray;
-			cvtColor(imageInput, view_gray, CV_RGB2GRAY);
+			cvtColor(imageInput, view_gray, cv::COLOR_RGB2GRAY);
 			/* finds subpixel-accurate positions of the chessboard corners */
 			find4QuadCornerSubpix(view_gray, image_points_buf, Size(11, 11)); //accuarte the corners' location
 			image_points_seq.push_back(image_points_buf);  //save sub-pixel

@@ -51,7 +51,7 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
     f32 max_dot_offset_horiz =
         (max_dot_run == 1)
         ? cam_pos_run_1[0]
-        : cam_pos_run_2[1];
+        : cam_pos_run_2[0];
     f32 max_dot_offset_vert =
         (max_dot_run == 1)
         ? cam_pos_run_1[2]
@@ -78,14 +78,20 @@ Vec3d find_barycentric_coords(Vec2d point, V2_Triangle t) {
 }
 
 inline void fill_uv_coord_with_color(Vec2d uv_coord, Vec3d barycentric_coord, V2_Triangle camera_space_triangle,
-                                     const Image &uv_image, const Image &camera_image)
+                                     Image uv_image, Image camera_image)
 {
     Vec2d camera_space_pixel {
-        camera_space_triangle.a[0] * barycentric_coord[0] + camera_space_triangle.b[0] * barycentric_coord[1] + camera_space_triangle.c[0] * barycentric_coord[2],
-        camera_space_triangle.a[1] * barycentric_coord[0] + camera_space_triangle.b[1] * barycentric_coord[1] + camera_space_triangle.c[1] * barycentric_coord[2],
+            camera_space_triangle.a[0] * barycentric_coord[0] + camera_space_triangle.b[0] * barycentric_coord[1] + camera_space_triangle.c[0] * barycentric_coord[2],
+            camera_space_triangle.a[1] * barycentric_coord[0] + camera_space_triangle.b[1] * barycentric_coord[1] + camera_space_triangle.c[1] * barycentric_coord[2],
     };
-    uv_image.at((u32)uv_coord[0], (u32)uv_coord[1])
-        = camera_image.at((u32)camera_space_pixel[0], (u32)camera_space_pixel[1]);
+    if (uv_coord[0] >= 0 && uv_coord[0] < uv_image.width &&
+        uv_coord[1] >= 0 && uv_coord[1] < uv_image.height &&
+        camera_space_pixel[0] >= 0 && camera_space_pixel[1] >= 0 &&
+        camera_space_pixel[0] < camera_image.width && camera_space_pixel[1] < camera_image.height)
+    {
+        uv_image.at((u32)uv_coord[0], (u32)uv_coord[1])
+                = camera_image.at((u32)camera_space_pixel[0], (u32)camera_space_pixel[1]);
+    }
 }
 
 void create_image_texture(const char* runs_path, const char* obj_path,
@@ -105,11 +111,16 @@ void create_image_texture(const char* runs_path, const char* obj_path,
                mesh->indices[i+2],
                mesh->indices.count);
 
+        Vertex tri_verts[3] = {
+            mesh->vertices[mesh->indices[i+0]],
+            mesh->vertices[mesh->indices[i+1]],
+            mesh->vertices[mesh->indices[i+2]],
+        };
 
         Vec3d average_normal =
-            normalize(mesh->vertices[i+0].normal +
-                      mesh->vertices[i+1].normal +
-                      mesh->vertices[i+2].normal);
+            normalize(tri_verts[0].normal +
+                      tri_verts[1].normal +
+                      tri_verts[2].normal);
 
 
         char* best_image_path;
@@ -124,22 +135,22 @@ void create_image_texture(const char* runs_path, const char* obj_path,
         
         V2_Triangle image_space_triangle;
         image_space_triangle.a = {
-            mesh->vertices[i+0].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+0].uv_coord[1] * (f32)image_texture.height
+            tri_verts[0].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[0].uv_coord[1] * (f32)image_texture.height
         };
         image_space_triangle.b = {
-            mesh->vertices[i+1].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+1].uv_coord[1] * (f32)image_texture.height
+            tri_verts[1].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[1].uv_coord[1] * (f32)image_texture.height
         };
         image_space_triangle.c =  {
-            mesh->vertices[i+2].uv_coord[0] * (f32)image_texture.width,
-            mesh->vertices[i+2].uv_coord[1] * (f32)image_texture.height
+            tri_verts[2].uv_coord[0] * (f32)image_texture.width,
+            tri_verts[2].uv_coord[1] * (f32)image_texture.height
         };
 
         V2_Triangle camera_space_triangle {
-            project_point_to_screen_space(mesh->vertices[i+0].pos, camera_mat, proj_mat),
-            project_point_to_screen_space(mesh->vertices[i+1].pos, camera_mat, proj_mat),
-            project_point_to_screen_space(mesh->vertices[i+2].pos, camera_mat, proj_mat)
+            project_point_to_screen_space(tri_verts[0].pos, camera_mat, proj_mat),
+            project_point_to_screen_space(tri_verts[1].pos, camera_mat, proj_mat),
+            project_point_to_screen_space(tri_verts[2].pos, camera_mat, proj_mat)
         };
         camera_space_triangle.a[0] =(camera_space_triangle.a[0] + 1.0f) / 2.0f * camera_image.width;
         camera_space_triangle.a[1] =(camera_space_triangle.a[1] + 1.0f) / 2.0f * camera_image.height;
@@ -159,7 +170,6 @@ void create_image_texture(const char* runs_path, const char* obj_path,
             fill_uv_coord_with_color(image_space_triangle.a, {1,0,0}, camera_space_triangle, image_texture, camera_image);
             fill_uv_coord_with_color(image_space_triangle.b, {0,1,0}, camera_space_triangle, image_texture, camera_image);
             fill_uv_coord_with_color(image_space_triangle.c, {0,0,1}, camera_space_triangle, image_texture, camera_image);
-
         }
 
         for (u32 y = v_start; y < v_start+height; ++y) {
@@ -182,6 +192,7 @@ void create_image_texture(const char* runs_path, const char* obj_path,
             next_pixel:;
             }
         }
+        free_image(camera_image);
     }
 
     store_image_as_png(image_texture, image_out_path);
