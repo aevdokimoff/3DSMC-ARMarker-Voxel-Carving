@@ -1,7 +1,21 @@
 #include <omp.h>
 #include "simple_marching_cubes.h"
 
-SimpleMarchingCubes::SimpleMarchingCubes(Volume<bool> *_volume, bool _in_parallel) : MarchingCubes(_volume, _in_parallel) {}
+ThresholdMarchingCubes::ThresholdMarchingCubes(Volume *_volume, int threshold, bool _in_parallel) :
+        SimpleMarchingCubes(_volume, _in_parallel), threshold(threshold)
+{}
+
+Vec3d ThresholdMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2)
+{
+    return p1 + (p2 - p1) * value1 / (value1 + value2);
+}
+
+bool ThresholdMarchingCubes::isPointOutside(int value)
+{
+    return value > threshold;
+}
+
+SimpleMarchingCubes::SimpleMarchingCubes(Volume *_volume, bool _in_parallel) : MarchingCubes(_volume, _in_parallel) {}
 
 void SimpleMarchingCubes::processVolume(SimpleMesh *mesh)
 {
@@ -37,16 +51,21 @@ void SimpleMarchingCubes::processVolumeCell(int x, int y, int z)
     }
 }
 
-Vec3d SimpleMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2)
+Vec3d SimpleMarchingCubes::interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2)
 {
     return p1 + (p2 - p1) / 2;
+}
+
+bool SimpleMarchingCubes::isPointOutside(int value)
+{
+    return value > 0;
 }
 
 void SimpleMarchingCubes::polygonise(TriangulatedCell &cell)
 {
     int degree = 1;
-    for (bool value : cell.values) {
-        if (!value) cell.cubeIndex |= degree;
+    for (int value : cell.values) {
+        if (isPointOutside(value)) cell.cubeIndex |= degree;
         degree <<= 1;
     }
 
@@ -56,13 +75,13 @@ void SimpleMarchingCubes::polygonise(TriangulatedCell &cell)
     for (int i = 0; i < 12; i++) {
         if (edgeTable[cell.cubeIndex] & degree) {
             cell.hasIntersection[i] = true;
-            cell.intersections[i] = interpret(cell.corners[edges[i][0]], cell.corners[edges[i][1]]);
+            cell.intersections[i] = interpret(cell.corners[edges[i][0]], cell.corners[edges[i][1]], cell.values[edges[i][0]], cell.values[edges[i][1]]);
         }
         degree <<= 1;
     }
 }
 
-void MarchingCubes::fillCell(GridCell<bool> &cell, int x, int y, int z) {
+void MarchingCubes::fillCell(GridCell &cell, int x, int y, int z) {
     // cell corners
     cell.corners[0] = volume->pos(x + 1, y, z);
     cell.corners[1] = volume->pos(x, y, z);

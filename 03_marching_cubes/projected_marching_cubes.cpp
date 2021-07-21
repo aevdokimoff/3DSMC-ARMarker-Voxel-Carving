@@ -5,7 +5,7 @@
 
 using namespace chrono; // debug
 
-ProjectedMarchingCubes::ProjectedMarchingCubes(Volume<bool> *_volume, string _dataPath, bool _in_parallel) : MarchingCubes(_volume, _in_parallel), dataPath(std::move(_dataPath)) {}
+ProjectedMarchingCubes::ProjectedMarchingCubes(Volume *_volume, string _dataPath, bool _in_parallel) : MarchingCubes(_volume, _in_parallel), dataPath(std::move(_dataPath)) {}
 
 void ProjectedMarchingCubes::processVolume(SimpleMesh *pMesh)
 {
@@ -178,12 +178,14 @@ void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *f
     int rightUpperCornerY = 0;
 
     for (const auto &corner : cell.corners) {
-        Vec2i projection = volume->projections[volume->getInd(corner)][ind];
+        Vec2d projection = project_point_to_screen_space(corner, viewMatrix, projectionMatrix);
+        int p_x = (projection[0] + 1.) / 2. * image.width;
+        int p_y = (projection[1] + 1.) / 2. * image.height;
 
-        leftBottomCornerX = min(leftBottomCornerX, projection[0]);
-        leftBottomCornerY = min(leftBottomCornerY, projection[1]);
-        rightUpperCornerX = max(rightUpperCornerX, projection[0]);
-        rightUpperCornerY = max(rightUpperCornerY, projection[1]);
+        leftBottomCornerX = min(leftBottomCornerX, p_x);
+        leftBottomCornerY = min(leftBottomCornerY, p_y);
+        rightUpperCornerX = max(rightUpperCornerX, p_x);
+        rightUpperCornerY = max(rightUpperCornerY, p_y);
     }
 
     Vec3d cameraPos(viewMatrix.get_minor<3, 1>(0, 3).val);

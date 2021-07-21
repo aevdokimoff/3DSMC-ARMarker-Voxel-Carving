@@ -3,8 +3,7 @@ project(3DSMC_ARMarker_Voxel_Carving)
 
 set(CMAKE_CXX_STANDARD 14)
 
-#set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
-set(CMAKE_CXX_FLAGS "-fopenmp")
+set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
 
 find_package(OpenCV REQUIRED)
 set(LIBRARIES  ${OpenCV_LIBS})

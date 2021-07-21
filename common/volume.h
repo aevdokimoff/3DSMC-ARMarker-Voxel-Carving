@@ -11,54 +11,23 @@ typedef unsigned int uint;
 
 using namespace cv;
 
-//! A regular volume dataset
-template <typename T>
 class Volume
 {
 public:
     Volume() = default;
     Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10, uint number_of_images = 72);
 
-	inline void computeMinMaxValues(double& minVal, double& maxVal) const
-	{
-		minVal = std::numeric_limits<double>::max();
-		maxVal = -minVal;
-		for (uint i1 = 0; i1 < dx * dy * dz; i1++)
-		{
-			if (minVal > vol[i1]) minVal = vol[i1];
-			if (maxVal < vol[i1]) maxVal = vol[i1];
-		}
-	}
-
 	//! Computes spacing in x,y,z-directions.
 	void compute_ddx_dddx();
 
-	//! Set the value at i.
-	inline void set(uint i, T val)
-	{
-		if (val > maxValue)
-			maxValue = val;
-
-		if (val < minValue)
-			minValue = val;
-
-		vol[i] = val;
-	}
-
 	//! Set the value at (x_, y_, z_).
-	inline void set(uint x_, uint y_, uint z_, T val)
+	inline void set(uint x_, uint y_, uint z_, int val)
 	{
-        if (val > maxValue)
-            maxValue = val;
-
-        if (val < minValue)
-            minValue = val;
-
         vol[getPosFromTuple(x_, y_, z_)] = val;
 	};
 
 	//! Get the value at (x_, y_, z_).
-	inline T get(uint i) const
+	inline int get(uint i) const
 	{
 		return vol[i];
 	};
@@ -70,13 +39,13 @@ public:
 	}
 
 	//! Get the value at (x_, y_, z_).
-	inline T get(uint x_, uint y_, uint z_) const
+	inline int get(uint x_, uint y_, uint z_) const
 	{
 		return vol[getPosFromTuple(x_, y_, z_)];
 	};
 
 	//! Get the value at (pos.x, pos.y, pos.z).
-	inline T get(const Vec3i& pos_) const
+	inline int get(const Vec3i& pos_) const
 	{
 		return(get(pos_[0], pos_[1], pos_[2]));
 	}
@@ -151,11 +120,8 @@ public:
 
 	//! Number of cells in x, y and z-direction.
 	uint dx, dy, dz;
-	std::vector<T> vol;
+	std::vector<int> vol;
 	std::vector<Vec3i> surface_indices;
-    std::vector<std::vector<Vec2i>> projections;
-
-    double maxValue, minValue;
 	double sideLength;
 
     bool correctVoxel(int x, int y, int z);
@@ -168,16 +134,13 @@ public:
 private:
 
 	//! x,y,z access to vol
-	inline T vol_access(int x, int y, int z) const
+	inline int vol_access(int x, int y, int z) const
 	{
 		return vol[getPosFromTuple(x, y, z)];
 	}
 
 };
 
-template <typename T>
-void print(const Volume<T> &volume);
-
-template class Volume<bool>;
+void print(const Volume &volume);
 
 #endif
