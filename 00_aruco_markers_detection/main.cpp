@@ -40,7 +40,7 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         Mat camR = R.t();  // calculate camera R matrix
         Mat camRvec;
         Rodrigues(R, camRvec); // calculate camera rvec
-        Mat camTvec= -camR * tvec; // calculate camera translation vector
+        Mat camTvec = -camR * tvec; // calculate camera translation vector
         Vec3d camTvecArr((double*)camTvec.data);
         
         // draw axis for the first detected marker
