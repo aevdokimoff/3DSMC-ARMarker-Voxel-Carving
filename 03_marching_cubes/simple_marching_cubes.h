@@ -26,10 +26,9 @@ struct Triangle {
     }
 };
 
-template <typename T>
 struct GridCell {
     Vec3d corners[8]{};
-    T values[8]{};
+    int values[8]{};
     uint cubeIndex = 0;
 
     GridCell() = default;
@@ -40,7 +39,7 @@ struct GridCell {
     }
 };
 
-struct TriangulatedCell : GridCell<bool> {
+struct TriangulatedCell : GridCell {
     Vec3d intersections[12]{};
     bool hasIntersection[12]{};
     vector<Vec3d> sideIntersections[6];
@@ -53,7 +52,7 @@ struct TriangulatedCell : GridCell<bool> {
 class MarchingCubes
 {
 public:
-    explicit MarchingCubes(Volume<bool> *_volume, bool _in_parallel = false) : volume(_volume), in_parallel(_in_parallel)
+    explicit MarchingCubes(Volume *_volume, bool _in_parallel = false) : volume(_volume), in_parallel(_in_parallel)
     {
         grid.resize(volume->getVoxelCnt());
     }
@@ -386,10 +385,10 @@ protected:
 
     bool in_parallel;
     mutex marching_cubes_mutex;
-    Volume<bool> *volume;
+    Volume *volume;
     vector<TriangulatedCell> grid;
 
-    void fillCell(GridCell<bool> &cell, int x, int y, int z);
+    void fillCell(GridCell &cell, int x, int y, int z);
     void fillMesh(SimpleMesh *mesh);
 private:
     virtual void processVolumeCell(int x, int y, int z) = 0;
@@ -398,18 +397,29 @@ private:
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
-    explicit SimpleMarchingCubes(Volume<bool> *_volume, bool _in_parallel = false);
+    explicit SimpleMarchingCubes(Volume *_volume, bool _in_parallel = false);
     void processVolume(SimpleMesh *mesh) override;
 private:
     void processVolumeCell(int x, int y, int z) override;
-    static Vec3d interpret(const Vec3d &p1, const Vec3d &p2);
+    virtual bool isPointOutside(int value);
+    virtual Vec3d interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2);
     void polygonise(TriangulatedCell &cell);
+};
+
+class ThresholdMarchingCubes : public SimpleMarchingCubes
+{
+public:
+    explicit ThresholdMarchingCubes(Volume *_volume, int threshold, bool _in_parallel = false);
+private:
+    Vec3d interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2);
+    bool isPointOutside(int value);
+    int threshold;
 };
 
 class ProjectedMarchingCubes : public MarchingCubes
 {
 public:
-    explicit ProjectedMarchingCubes(Volume<bool> *_volume, string dataPath, bool _in_parallel = false);
+    explicit ProjectedMarchingCubes(Volume *_volume, string dataPath, bool _in_parallel = false);
     void processVolume(SimpleMesh* pMesh) override;
 private:
     string dataPath;

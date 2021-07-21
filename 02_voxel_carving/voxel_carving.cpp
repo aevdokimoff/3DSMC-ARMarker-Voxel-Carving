@@ -7,18 +7,19 @@
 
 std::mutex mutex;
 
-Volume<bool> generate_point_cloud(u32 resolution, f32 side_length) {
-    Volume<bool> volume(
+Volume generate_point_cloud(u32 resolution, f32 side_length)
+{
+    Volume volume(
             Vec3d(-side_length / 2, -side_length / 2, 0),
             Vec3d(side_length / 2, side_length / 2, side_length),
             resolution);
-    std::fill(volume.vol.begin(), volume.vol.end(), true);
+    std::fill(volume.vol.begin(), volume.vol.end(), 0);
     return volume;
 }
 
-void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint ind,
+void carve_using_singe_image(Volume *volume, const char* image_path, uint ind,
                              const Matx44d &view_mat, const Matx44d &proj_mat,
-                             bool output_result_image, bool save_projections) {
+                             bool output_result_image) {
     Image image = load_image(image_path);
     Image output_image{};
 
@@ -35,13 +36,8 @@ void carve_using_singe_image(Volume<bool> *volume, const char* image_path, uint 
                 int p_x = (p[0] + 1.) / 2. * image.width;
                 int p_y = (p[1] + 1.) / 2. * image.height;
 
-                if (save_projections) volume->projections[volume->getPosFromTuple(x, y, z)][ind] = Vec2i(p_x, p_y);
-
                 bool outside = image.at(p_x, p_y).r < 150;
-                if (outside) {
-                    std::unique_lock<std::mutex> lock(mutex);
-                    volume->set(x, y, z, false);
-                }
+                if (outside) volume->set(x, y, z, volume->get(x, y, z) + 1);
 
                 if (output_result_image) {
                     int thickness = 1;
@@ -95,8 +91,8 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
     printf("\rDone processing run %s\n", run_path);
 }
 
-void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_parallel,
-                 bool output_result_image, bool save_projections) {
+void voxel_carve(Volume *volume, const char *path_to_runs, bool carve_in_parallel, bool output_result_image)
+{
     static char file_path1[1024];
     static char file_path2[1024];
 
@@ -106,7 +102,7 @@ void voxel_carve(Volume<bool> *volume, const char* path_to_runs, bool carve_in_p
     fflush(stdout);
 
     auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat, Matx44d projection_mat) {
-        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image, save_projections);
+        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image);
     };
 
     sprintf(file_path1, "%s/run_1", path_to_runs);

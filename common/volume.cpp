@@ -2,8 +2,7 @@
 #include <cmath>
 #include <fstream>
 
-template <typename T>
-Volume<T>::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution, uint number_of_images) :
+Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution, uint number_of_images) :
     sideLength(sideLength), v_min(min_), v_max(max_)
 {
     diag = v_max - v_min;
@@ -11,17 +10,14 @@ Volume<T>::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution, uint nu
 	dy = resolution;
 	dz = resolution;
 	int length = (dx + 1) * (dy + 1) * (dz + 1);
-	vol = std::vector<T>(length);
-	projections = std::vector<std::vector<Vec2i>>(length);
-    for (int i = 0; i < length; i++) projections[i] = std::vector<Vec2i>(number_of_images);
+	vol = std::vector<int>(length);
 
 	compute_ddx_dddx();
 }
 
 
 //! Computes spacing in x,y,z-directions.
-template <typename T>
-void Volume<T>::compute_ddx_dddx()
+void Volume::compute_ddx_dddx()
 {
 	ddx = 1.0f / (dx - 1);
 	ddy = 1.0f / (dy - 1);
@@ -41,29 +37,25 @@ void Volume<T>::compute_ddx_dddx()
 }
 
 //! Sets minimum extension
-template <typename T>
-void Volume<T>::SetMin(const Vec3d& min_)
+void Volume::SetMin(const Vec3d& min_)
 {
     v_min = min_;
 	diag = v_max - v_min;
 }
 
 //! Sets maximum extension
-template <typename T>
-void Volume<T>::SetMax(const Vec3d& max_)
+void Volume::SetMax(const Vec3d& max_)
 {
     v_max = max_;
 	diag = v_max - v_min;
 }
 
-template <typename T>
-bool Volume<T>::correctVoxel(int x, int y, int z)
+bool Volume::correctVoxel(int x, int y, int z)
 {
     return (x >= 0) && (y >= 0) && (z >= 0) && (x < dx - 1) && (y < dy - 1) && (z < dz - 1);
 }
 
-template <typename T>
-bool Volume<T>::writeToFile(const std::string &filename) {
+bool Volume::writeToFile(const std::string &filename) {
     std::ofstream outFile(filename);
     if (!outFile.is_open()) return false;
 
@@ -73,21 +65,15 @@ bool Volume<T>::writeToFile(const std::string &filename) {
     outFile << dx << ' ' << dy << ' ' << dz << std::endl; //uint
     outFile << ddx << ' ' << ddy << ' ' << ddz << std::endl; //double
     outFile << dddx << ' ' << dddy << ' ' << dddz << std::endl; //double
-    outFile << sideLength << ' ' << minValue << ' ' << maxValue << std::endl; //double
+    outFile << sideLength << std::endl; //double
     outFile << vol.size() << std::endl; // int
     for (auto value: vol) outFile << value << ' '; //bool
-
-    outFile << projections[0].size() << std::endl; // int
-    for (const auto &images: projections)
-        for (auto projection: images)
-            outFile << projection[0] << ' ' << projection[1] << std::endl; // int
 
     outFile.close();
     return true;
 }
 
-template <typename T>
-bool Volume<T>::writePointCloudToFile(const std::string &filename)
+bool Volume::writePointCloudToFile(const std::string &filename)
 {
     std::ofstream outfile(filename);
     if (!outfile.is_open()) return false;
@@ -111,8 +97,7 @@ bool Volume<T>::writePointCloudToFile(const std::string &filename)
     return true;
 }
 
-template <typename T>
-bool Volume<T>::readFromFile(const std::string &filename)
+bool Volume::readFromFile(const std::string &filename)
 {
     std::ifstream inFile(filename);
     if (!inFile.is_open()) return false;
@@ -123,7 +108,7 @@ bool Volume<T>::readFromFile(const std::string &filename)
     inFile >> dx >> dy >> dz; //uint
     inFile >> ddx >> ddy >> ddz; //double
     inFile >> dddx >> dddy >> dddz; //double
-    inFile >> sideLength >> minValue >> maxValue; //double
+    inFile >> sideLength; //double
     int size;
     inFile >> size;
     for (int i = 0; i < size; i++)
@@ -133,24 +118,11 @@ bool Volume<T>::readFromFile(const std::string &filename)
         vol.push_back(value);
     }
 
-    uint number_of_images;
-    inFile >> number_of_images; // int
-    for (int i = 0; i < size; i++)
-    {
-        projections.emplace_back();
-        for (int j = 0; j < number_of_images; j++)
-        {
-            int x, y;
-            inFile >> x >> y; // int
-            projections[i].push_back(Vec2d(x, y));
-        }
-    }
     inFile.close();
     return true;
 }
 
-template <typename T>
-void print(const Volume<T>& volume) {
+void print(const Volume &volume) {
     for (u32 z = 0; z < volume.dz; ++z) {
         for (u32 y = 0; y < volume.dy; ++y) {
             for (u32 x = 0; x < volume.dx; ++x) {
