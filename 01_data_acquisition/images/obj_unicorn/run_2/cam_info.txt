@@ -1,0 +1,3 @@
+x_dist = 62 cm
+z_dist = 54 cm
+x_offset = -17 px

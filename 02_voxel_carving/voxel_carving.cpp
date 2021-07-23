@@ -33,6 +33,13 @@ void carve_using_singe_image(Volume *volume, const char* image_path, uint ind,
 
                 Vec2d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
+                if (p[0] < -1 || p[0] > 1 ||
+                    p[1] < -1 || p[1] > 1)
+                {
+                    volume->set(x, y, z, volume->get(x, y, z) + 1);
+                    continue;
+                }
+
                 int p_x = (p[0] + 1.) / 2. * image.width;
                 int p_y = (p[1] + 1.) / 2. * image.height;
 
@@ -85,7 +92,7 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
         Matx44d view_mat = generate_view_mat(cam_pos[0], cam_pos[2], degrees);
 
         char image_path[1024];
-        sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);
+        sprintf(image_path, "%s/realigned_bw_LR/%03d.jpg", run_path, degrees);
         onProcess(image_path, degrees_it, view_mat, projection_mat);
     }
     printf("\rDone processing run %s\n", run_path);
@@ -108,6 +115,6 @@ void voxel_carve(Volume *volume, const char *path_to_runs, bool carve_in_paralle
     sprintf(file_path1, "%s/run_1", path_to_runs);
     process_using_single_run(file_path1, proj_mat, carve_in_parallel, voxel_carve);
 
-    sprintf(file_path2, "%s/run_2", path_to_runs);
-    process_using_single_run(file_path2, proj_mat, carve_in_parallel, voxel_carve);
+    // sprintf(file_path2, "%s/run_2", path_to_runs);
+    // process_using_single_run(file_path2, proj_mat, carve_in_parallel, voxel_carve);
 }

@@ -40,12 +40,12 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
             max_dot_degrees = degrees;
         }
 
-        t = normal.dot(cam_dir_run_2);
-        if (t > max_dot) {
-            max_dot = t;
-            max_dot_run = 2;
-            max_dot_degrees = degrees;
-        }
+        // t = normal.dot(cam_dir_run_2);
+        // if (t > max_dot) {
+            // max_dot = t;
+            // max_dot_run = 2;
+            // max_dot_degrees = degrees;
+        // }
     }
 
     f32 max_dot_offset_horiz =
@@ -60,7 +60,7 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
     *out_camera_mat = generate_view_mat(max_dot_offset_horiz,
                                               max_dot_offset_vert,
                                               max_dot_degrees);
-    print_to_string(out_image_path, "run_%d/rgb/%03d.jpg", max_dot_run, max_dot_degrees);
+    print_to_string(out_image_path, "run_%d/realigned_rgb_LR/%03d.jpg", max_dot_run, max_dot_degrees);
 
 }
 
@@ -102,7 +102,7 @@ void create_image_texture(const char* runs_path, const char* obj_path,
     Image image_texture = create_black_image(out_res, out_res);
 
     // for every face
-#pragma omp parallel for
+#pragma omp parallel for num_threads(8)
     for (s32 i = 0; i < mesh->indices.count; i += 3) {
         Image camera_image{};
         printf("face: %u %u %u | %u\n",
@@ -160,10 +160,10 @@ void create_image_texture(const char* runs_path, const char* obj_path,
         camera_space_triangle.c[1] =(camera_space_triangle.c[1] + 1.0f) / 2.0f * camera_image.height;
 
         // printf("Image space triangle");
-        u32 u_start = (u32)min3(image_space_triangle.a[0], image_space_triangle.b[0], image_space_triangle.c[0]);
-        u32 v_start = (u32)min3(image_space_triangle.a[1], image_space_triangle.b[1], image_space_triangle.c[1]);
-        u32 width   = (u32)(ceil(max3(image_space_triangle.a[0], image_space_triangle.b[0], image_space_triangle.c[0]) - u_start));
-        u32 height  = (u32)(ceil(max3(image_space_triangle.a[1], image_space_triangle.b[1], image_space_triangle.c[1]) - v_start));
+        u32 u_start = (u32)min3(image_space_triangle.a[0], image_space_triangle.b[0], image_space_triangle.c[0]) -1;
+        u32 v_start = (u32)min3(image_space_triangle.a[1], image_space_triangle.b[1], image_space_triangle.c[1]) -1;
+        u32 width   = (u32)(ceil(max3(image_space_triangle.a[0], image_space_triangle.b[0], image_space_triangle.c[0]) - u_start)) +2;
+        u32 height  = (u32)(ceil(max3(image_space_triangle.a[1], image_space_triangle.b[1], image_space_triangle.c[1]) - v_start)) +2;
 
         // color in vertices first
         {
@@ -174,15 +174,17 @@ void create_image_texture(const char* runs_path, const char* obj_path,
 
         for (u32 y = v_start; y < v_start+height; ++y) {
             for (u32 x = u_start; x < u_start+width; ++x) {
-                for (u8 sub_v = 0; sub_v < 2; ++sub_v) {
-                    for (u8 sub_u = 0; sub_u < 2; ++sub_u) {
+                for (s8 sub_v = -1; sub_v <= 1; ++sub_v) {
+                    for (s8 sub_u = -1; sub_u <= 1; ++sub_u) {
                         Vec2d pixel {
                             (f32)x + sub_u,
                             (f32)y + sub_v
                         };
 
+                        f32 t = -0.05;
+
                         Vec3d b_coords = find_barycentric_coords(pixel, image_space_triangle);
-                        if (b_coords[0] > 0 && b_coords[1] > 0 && b_coords[2] > 0) {
+                        if (b_coords[0] > t && b_coords[1] > t && b_coords[2] > t) {
                             // we are in the triangle, yey
                             fill_uv_coord_with_color({(f32)x, (f32)y}, b_coords, camera_space_triangle, image_texture, camera_image);
                             goto next_pixel;

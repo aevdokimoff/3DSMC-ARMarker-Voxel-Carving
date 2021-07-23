@@ -8,7 +8,7 @@ using namespace chrono;
 #define USE_IMPLICIT_SURFACE false
 #define TORUS true
 
-#define OBJECT Object::unicorn
+#define OBJECT Object::duck
 #define MARCHING_CUBES MarchingCubesType::simple
 
 #define WITH_VOXEL_CARVING true
@@ -99,8 +99,8 @@ int main(int argc, char *argv[]) {
     }
     else if (WITH_VOXEL_CARVING)
     {
-        int resolution = LOW_RESOLUTION ? 20 : 100;
-        volume = generate_point_cloud(resolution, 0.1);
+        int resolution = LOW_RESOLUTION ? 20 : 200;
+        volume = generate_point_cloud(resolution, 0.13);
         auto start_voxel_carve = chrono::steady_clock::now();
         voxel_carve(&volume, ("../01_data_acquisition/images/obj_" + name).data(), IN_PARALLEL, SAVE_RESULT_IMAGE);
         auto end_voxel_carve = chrono::steady_clock::now();
