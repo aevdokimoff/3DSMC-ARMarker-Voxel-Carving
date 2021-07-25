@@ -2,7 +2,7 @@
 #include <cmath>
 #include <fstream>
 
-Volume::Volume(const Vec3d& min_, const Vec3d& max_, uint resolution, uint number_of_images) :
+Volume::Volume(const Vec3d &min_, const Vec3d &max_, uint resolution) :
     sideLength(sideLength), v_min(min_), v_max(max_)
 {
     diag = v_max - v_min;

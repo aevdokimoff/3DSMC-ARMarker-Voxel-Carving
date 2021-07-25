@@ -1,11 +1,8 @@
 #include <cstdio>
 #include <omp.h>
-#include <mutex>
 #include "voxel_carving.hpp"
 #include "common.h"
 #include "image.h"
-
-std::mutex mutex;
 
 Volume generate_point_cloud(u32 resolution, f32 side_length)
 {

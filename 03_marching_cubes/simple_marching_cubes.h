@@ -16,29 +16,25 @@
 using namespace cv;
 using namespace std;
 
-struct Triangle {
-    Vec3d points[3]{};
-
-    Triangle() = default;
-
-    Triangle(Vec3d _p[3]) {
-        copy(_p, _p + 3, points);
-    }
-};
-
+/**
+ * Base class for a voxel grid cell.
+ * Contains 3D coordinates of 8 vertices, corresponding integer values for each vertex.
+ * Parameter `cubeIndex` is a mask defining the edges that intersect the surface of the object.
+ */
 struct GridCell {
     Vec3d corners[8]{};
     int values[8]{};
     uint cubeIndex = 0;
 
     GridCell() = default;
-
-    GridCell(Vec3d _p[8], double _val[8]) {
-        copy(_p, _p + 8, corners);
-        copy(_val, _val + 8, values);
-    }
 };
 
+/**
+ * Extension of the GridCell class.
+ * intersections -- contains calculated vertices of the triangulated mesh on the edges of the cell.
+ * hasIntersection -- for each cell edge is true if the edge intersects the surface and false otherwise.
+ * sideIntersections -- contains intersections of preimages of background of images with the faces of the grid.
+ */
 struct TriangulatedCell : GridCell {
     Vec3d intersections[12]{};
     bool hasIntersection[12]{};
@@ -49,6 +45,11 @@ struct TriangulatedCell : GridCell {
     }
 };
 
+/**
+ * Basic class for Marching cubes algorithm.
+ * Contains a pointer to a volume object and all the needed constant arrays that define the structure of voxels.
+ * processVolume -- run the algorithm in the given volume and write the result into the SimpleMesh object.
+ */
 class MarchingCubes
 {
 public:
@@ -394,6 +395,12 @@ private:
     virtual void processVolumeCell(int x, int y, int z) = 0;
 };
 
+/**
+ * A marching cubes algorithm.
+ * A point is regarded outside of the surface if its value is greater than 0.
+ * If an edge has one vertex inside of the surface and another outside --
+ *      the algorithm will put the mesh vertex in the middle of the edge.
+ */
 class SimpleMarchingCubes : public MarchingCubes
 {
 public:
@@ -406,16 +413,25 @@ private:
     void polygonise(TriangulatedCell &cell);
 };
 
+/**
+ * A marching cubes algorithm.
+ * A point is regarded outside of the surface if its value is greater than the `threshold` constructor parameter.
+ * If an edge has one vertex inside of the surface and another outside --
+ *      the algorithm will put the mesh vertex further from the vertex with the greater value.
+ */
 class ThresholdMarchingCubes : public SimpleMarchingCubes
 {
 public:
     explicit ThresholdMarchingCubes(Volume *_volume, int threshold, bool _in_parallel = false);
 private:
-    Vec3d interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2);
-    bool isPointOutside(int value);
+    Vec3d interpret(const Vec3d &p1, const Vec3d &p2, int value1, int value2) override;
+    bool isPointOutside(int value) override;
     int threshold;
 };
 
+/**
+ * A marching cubes from the paper "Shape from Silhouette: Image Pixels for Marching Cubes", 2005, Mercier and Méneveaux.
+ */
 class ProjectedMarchingCubes : public MarchingCubes
 {
 public:
