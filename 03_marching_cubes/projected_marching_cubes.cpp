@@ -164,7 +164,7 @@ void ProjectedMarchingCubes::processImages(const string& path)
         }
     };
 
-    process_using_single_run(path.data(), proj_mat, false, processImage);
+    // process_using_single_run(path.data(), proj_mat, false, processImage);
 }
 
 void ProjectedMarchingCubes::projectPixels(TriangulatedCell &cell, const char *filePath, uint ind, Matx44d viewMatrix, Matx44d projectionMatrix)

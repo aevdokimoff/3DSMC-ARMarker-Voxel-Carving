@@ -15,13 +15,15 @@
 #define max3(x, y, z) (max(max((x), (y)), (z)))
 
 void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
-                             char** out_image_path, Matx44d* out_camera_mat) {
+                             char** out_image_path, Matx44d* out_camera_mat, s32* out_horiz_offset) {
 
     char cam_info_path[1024];
     sprintf(cam_info_path, "%s/run_1/", runs_path);
-    Vec3d cam_pos_run_1 = get_cam_pos_for_run(cam_info_path);
+    Cam_Info cam_info_run_1 = get_cam_info_for_run(cam_info_path);
     sprintf(cam_info_path, "%s/run_2/", runs_path);
-    Vec3d cam_pos_run_2 = get_cam_pos_for_run(cam_info_path);
+    Cam_Info cam_info_run_2 = get_cam_info_for_run(cam_info_path);
+    Vec3d cam_pos_run_1 = cam_info_run_1.camera_position;
+    Vec3d cam_pos_run_2 = cam_info_run_2.camera_position;
 
     f32 max_dot = -1;
     s32 max_dot_run = -1;
@@ -40,12 +42,12 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
             max_dot_degrees = degrees;
         }
 
-        // t = normal.dot(cam_dir_run_2);
-        // if (t > max_dot) {
-            // max_dot = t;
-            // max_dot_run = 2;
-            // max_dot_degrees = degrees;
-        // }
+        t = normal.dot(cam_dir_run_2);
+        if (t > max_dot) {
+            max_dot = t;
+            max_dot_run = 2;
+            max_dot_degrees = degrees;
+        }
     }
 
     f32 max_dot_offset_horiz =
@@ -58,10 +60,16 @@ void find_path_of_best_image(const Vec3d& normal, const char* runs_path,
         : cam_pos_run_2[2];
 
     *out_camera_mat = generate_view_mat(max_dot_offset_horiz,
-                                              max_dot_offset_vert,
-                                              max_dot_degrees);
-    print_to_string(out_image_path, "run_%d/realigned_rgb_LR/%03d.jpg", max_dot_run, max_dot_degrees);
+                                        max_dot_offset_vert,
+                                        max_dot_degrees);
 
+    if (max_dot_run == 1) {
+        *out_horiz_offset = cam_info_run_1.horiz_pixel_offset;
+    } else {
+        *out_horiz_offset = cam_info_run_2.horiz_pixel_offset;
+    }
+    
+    print_to_string(out_image_path, "run_%d/rgb/%03d.jpg", max_dot_run, max_dot_degrees);
 }
 
 Vec3d find_barycentric_coords(Vec2d point, V2_Triangle t) {
@@ -125,8 +133,9 @@ void create_image_texture(const char* runs_path, const char* obj_path,
 
         char* best_image_path;
         Matx44d camera_mat;
+        s32 horiz_pixel_offset;
         char file_path[1024];
-        find_path_of_best_image(average_normal, runs_path, &best_image_path, &camera_mat);
+        find_path_of_best_image(average_normal, runs_path, &best_image_path, &camera_mat, &horiz_pixel_offset);
         sprintf(file_path, "%s/%s", runs_path, best_image_path);
         printf("loading: %s\n", file_path);
         fflush(stdout);
@@ -152,12 +161,12 @@ void create_image_texture(const char* runs_path, const char* obj_path,
             project_point_to_screen_space(tri_verts[1].pos, camera_mat, proj_mat),
             project_point_to_screen_space(tri_verts[2].pos, camera_mat, proj_mat)
         };
-        camera_space_triangle.a[0] =(camera_space_triangle.a[0] + 1.0f) / 2.0f * camera_image.width;
-        camera_space_triangle.a[1] =(camera_space_triangle.a[1] + 1.0f) / 2.0f * camera_image.height;
-        camera_space_triangle.b[0] =(camera_space_triangle.b[0] + 1.0f) / 2.0f * camera_image.width;
-        camera_space_triangle.b[1] =(camera_space_triangle.b[1] + 1.0f) / 2.0f * camera_image.height;
-        camera_space_triangle.c[0] =(camera_space_triangle.c[0] + 1.0f) / 2.0f * camera_image.width;
-        camera_space_triangle.c[1] =(camera_space_triangle.c[1] + 1.0f) / 2.0f * camera_image.height;
+        camera_space_triangle.a[0] = (camera_space_triangle.a[0] + 1.0f) / 2.0f * camera_image.width - horiz_pixel_offset;
+        camera_space_triangle.b[0] = (camera_space_triangle.b[0] + 1.0f) / 2.0f * camera_image.width - horiz_pixel_offset;
+        camera_space_triangle.c[0] = (camera_space_triangle.c[0] + 1.0f) / 2.0f * camera_image.width - horiz_pixel_offset;
+        camera_space_triangle.a[1] = (camera_space_triangle.a[1] + 1.0f) / 2.0f * camera_image.height;
+        camera_space_triangle.b[1] = (camera_space_triangle.b[1] + 1.0f) / 2.0f * camera_image.height;
+        camera_space_triangle.c[1] = (camera_space_triangle.c[1] + 1.0f) / 2.0f * camera_image.height;
 
         // printf("Image space triangle");
         u32 u_start = (u32)min3(image_space_triangle.a[0], image_space_triangle.b[0], image_space_triangle.c[0]) -1;

@@ -89,25 +89,27 @@ Vec2d project_point_to_screen_space(const Vec3d &pos, Matx44d view_mat, Matx44d 
 
 }
 
-Vec3d get_cam_pos_for_run(const char* run_path) {
+Cam_Info get_cam_info_for_run(const char* run_path) {
     char file_path[1024];
     sprintf(file_path, "%s/cam_info.txt", run_path);
 
-    Vec3d cam_pos {};
+    Cam_Info info {};
 
     FILE* conf_file = fopen(file_path, "r");
     if (!conf_file) {
         fprintf(stderr, "ERROR: The cam info file was not found in %s.\n", file_path);
         return {};
     }
-    fscanf(conf_file, "x_dist = %lf cm\n", &cam_pos[0]);
-    fscanf(conf_file, "z_dist = %lf cm\n", &cam_pos[2]);
+
+    fscanf(conf_file, "x_dist = %lf cm\n",  &(info.camera_position[0]));
+    fscanf(conf_file, "z_dist = %lf cm\n",  &(info.camera_position[2]));
+    fscanf(conf_file, "x_offset = %d px\n", &(info.horiz_pixel_offset));
     fclose(conf_file);
 
-    cam_pos[0] /= -100; // camera should be looking into x direction, so make it negative
-    cam_pos[2] /=  100;
+    info.camera_position[0] /= -100; // camera should be looking into x direction, so make it negative
+    info.camera_position[2] /=  100;
 
-    return cam_pos;
+    return info;
 }
 
 Vec3d project_screen_point_to_3d(const Vec3d &pos, const Matx44d &extrinsic, const Matx44d &intrinsic) {

@@ -8,7 +8,7 @@ using namespace chrono;
 #define USE_IMPLICIT_SURFACE false
 #define TORUS true
 
-#define OBJECT Object::duck
+// #define OBJECT Object::unicorn
 #define MARCHING_CUBES MarchingCubesType::simple
 
 #define WITH_VOXEL_CARVING true
@@ -50,6 +50,13 @@ Volume getImplicitVolume(bool torus = true) {
 int main(int argc, char *argv[]) {
     std::string name;
     std::string algorithm;
+
+    if (argc != 2) {
+        std::cerr << "Usage: marching_cubes <object>" << std::endl;
+        return 1;
+    }
+    name = argv[1];
+
     switch (MARCHING_CUBES)
     {
         case simple:
@@ -63,21 +70,6 @@ int main(int argc, char *argv[]) {
             break;
         default:
             cout << "Failed to interpret the algorithm";
-            return 1;
-    }
-    switch (OBJECT)
-    {
-        case Object::owl:
-            name = "owl";
-            break;
-        case Object::duck:
-            name = "duck";
-            break;
-        case Object::unicorn:
-            name = "unicorn";
-            break;
-        default:
-            cout << "Failed to interpret the object";
             return 1;
     }
 
