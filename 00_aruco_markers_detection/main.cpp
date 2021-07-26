@@ -36,7 +36,7 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         
         // https://stackoverflow.com/questions/51476702/pose-of-camera-from-the-pose-of-marker
         Mat R;
-        cv::Rodrigues(rvec, R); // calculate object pose R matrix
+        cv::Rodrigues(rvec, R); // calculate marker pose R matrix
         Mat camR = R.t();  // calculate camera R matrix
         Mat camRvec;
         Rodrigues(R, camRvec); // calculate camera rvec
