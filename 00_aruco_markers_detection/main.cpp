@@ -4,68 +4,72 @@
 #include <string>
 #include <cmath>
 #include "../3rd_party_libs/opencv3.4/include/opencv2/core/utility.hpp"
+#define DRAW_AXES 1
 
 using namespace cv;
 using namespace std;
 
 tuple<double, double> horizontalVerticalOffset(string image_path, string calibration_params) {
     cv::Mat cameraMatrix, distCoeffs;
-    cv::FileStorage fs(calibration_params, cv::FileStorage::READ);
+    cv::FileStorage fs(calibration_params, cv::FileStorage::READ); // Read calibration parameters from file storage
     
-    fs["camera_matrix"] >> cameraMatrix;
-    fs["distortion_coefficients"] >> distCoeffs;
+    fs["camera_matrix"] >> cameraMatrix; // Read camera matrix
+    fs["distortion_coefficients"] >> distCoeffs; // Read distortion coefficients
     
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250); // Get a predefined dictionary DICT_6X6_250 containing a set of ArUco markers
     
     string image_file = samples::findFile(image_path);
-    Mat image = imread(image_file, IMREAD_COLOR);
+    Mat image = imread(image_file, IMREAD_COLOR); // Retrieve image
     Mat imageCopy;
     
     image.copyTo(imageCopy);
     vector<int> ids;
     vector<vector<Point2f>> corners;
-    detectMarkers(image, dictionary, corners, ids);
+    detectMarkers(image, dictionary, corners, ids); // ArUco marker detection
     
-    // if at least one marker detected
     if (ids.size() > 0) {
-        aruco::drawDetectedMarkers(imageCopy, corners, ids);
+        // at least one marker detected
+        aruco::drawDetectedMarkers(imageCopy, corners, ids); // Draw detected markers in image. Can be further used for debuggin purposes
         vector<cv::Vec3d> rvecs, tvecs;
-        aruco::estimatePoseSingleMarkers(corners, 0.0975, cameraMatrix, distCoeffs, rvecs, tvecs);
-        Vec3d rvec = rvecs[0];
-        Vec3d tvec = tvecs[0];
+        aruco::estimatePoseSingleMarkers(corners, 0.0975, cameraMatrix, distCoeffs, rvecs, tvecs); // Pose estimation for single markers
+        Vec3d rvec = rvecs[0]; // first element of the array of output rotation vectors. Each element in rvecs corresponds to the specific marker
+        Vec3d tvec = tvecs[0]; // first element of the array of output translation vectors. Each element in tvecs corresponds to the specific marker
         
-        // https://stackoverflow.com/questions/51476702/pose-of-camera-from-the-pose-of-marker
+        // Source: https://stackoverflow.com/questions/51476702/pose-of-camera-from-the-pose-of-marker
         Mat R;
-        cv::Rodrigues(rvec, R); // calculate marker pose R matrix
-        Mat camR = R.t();  // calculate camera R matrix
+        cv::Rodrigues(rvec, R); // Calculate marker pose R matrix
+        Mat camR = R.t();  // Calculate camera R matrix
         Mat camRvec;
-        Rodrigues(R, camRvec); // calculate camera rvec
-        Mat camTvec = -camR * tvec; // calculate camera translation vector
-        Vec3d camTvecArr((double*)camTvec.data);
+        Rodrigues(R, camRvec); // Calculate camera rvec
+        Mat camTvec = -camR * tvec; // Calculate camera translation vector
+        Vec3d camTvecArr((double*)camTvec.data); // Convert to vector
         
-        // draw axis for the first detected marker
+        double vertical_offset = camTvecArr[2]; // Calculate vertical offset
+        double horizontal_offset = sqrt(pow(camTvecArr(0), 2) + pow(camTvecArr(1), 2)); // Calculate horizontal offset using pythagorean theorem
+        
+#if DRAW_AXES
+        // Axes representing the marker's coordinate system can visualized for debugging purposes
+        // Draw axis for the first detected marker.
         aruco::drawAxis(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
-        double vertical_offset = camTvecArr[2];
-        double horizontal_offset = sqrt(pow(camTvecArr(0), 2) + pow(camTvecArr(1), 2));
-        
         imshow("Display window", imageCopy);
         int k = waitKey(0);
         if(k == 's') {
             imwrite(image_path, imageCopy);
         }
+#endif // DEBUG
         
-        return  std::make_tuple(horizontal_offset, vertical_offset);
+        return std::make_tuple(horizontal_offset, vertical_offset); // Return a tuple of (horizontal_offset, vertical_offset)
     }
     
-    return  std::make_tuple(-1.0, -1.0);
+    return  std::make_tuple(-1.0, -1.0); // Return (-1, -1) in case estimation failed
 }
 
-int main() {
-    string calibration_params = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/calibration_params.yml";
-    
-//    x_dist = 62 cm; z_dist = 48 cm
+int main(int argc, char** argv) {
+    // "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/calibration_params.yml"
+    // "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/correct-rotation-2.jpg"
+    string calibration_params = argv[1];
     double horizontal_offset, vertical_offset;
-    string input = "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/correct-rotation-2.jpg";
+    string input = argv[2];
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(input, calibration_params);
     cout << horizontal_offset << ',' << vertical_offset << endl;
 }
