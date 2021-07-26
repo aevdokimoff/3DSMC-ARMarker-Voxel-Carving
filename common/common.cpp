@@ -15,8 +15,8 @@ Matx33d generate_z_rot_mat(f32 angle) {
 }
 
 Matx44d generate_proj_mat(f32 fovy, f32 aspect, f32 zNear, f32 zFar) {
-    // assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
-
+    // NOTE(Felix): This function was taken from and adaped from glm:
+    // https://github.com/g-truc/glm/blob/b3f87720261d623986f164b2a7f6a0a938430271/glm/ext/matrix_clip_space.inl#L233
     f32 const tanHalfFovy = tan(fovy / 2.);
 
     Matx44d result;
@@ -38,6 +38,8 @@ Matx44d generate_our_proj_mat() {
 }
 
 Matx44d generate_look_at_mat(const Vec3d &eye, const Vec3d &center, const Vec3d &up) {
+    // NOTE(Felix): This function was taken from glm and adapted
+    // https://github.com/g-truc/glm/blob/b3f87720261d623986f164b2a7f6a0a938430271/glm/ext/matrix_transform.inl#L99
     Vec3d f = normalize(eye - center);
     Vec3d s = normalize(f.cross(up));
     Vec3d u = s.cross(f);
