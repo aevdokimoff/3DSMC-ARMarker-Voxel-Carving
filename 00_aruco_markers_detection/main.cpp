@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
     string calibration_params = "./input/calibration_params.yml"; // Calibration parameters file path
     string input = "./input/marker.jpg"; // Marker image file input path
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(input, calibration_params);
-    cout << horizontal_offset << ', ' << vertical_offset << endl;
+    cout.precision(8);
+    cout << "Horizontal and Vertical Offsets: " << fixed << horizontal_offset << ';' << vertical_offset << endl;
 }
 
