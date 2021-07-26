@@ -56,7 +56,7 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         if(k == 's') {
             imwrite(image_path, imageCopy);
         }
-#endif // DEBUG
+#endif // DRAW_AXES
         
         return std::make_tuple(horizontal_offset, vertical_offset); // Return a tuple of (horizontal_offset, vertical_offset)
     }
