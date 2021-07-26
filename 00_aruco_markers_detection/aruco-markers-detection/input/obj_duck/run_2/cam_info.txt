@@ -1,2 +1,0 @@
-x_dist = 62 cm
-z_dist = 57 cm

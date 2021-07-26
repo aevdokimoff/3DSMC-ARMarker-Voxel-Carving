@@ -4,7 +4,7 @@
 #include <string>
 #include <cmath>
 #include "../3rd_party_libs/opencv3.4/include/opencv2/core/utility.hpp"
-#define DRAW_AXES 1
+#define DRAW_AXES 0
 
 using namespace cv;
 using namespace std;
@@ -61,15 +61,14 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         return std::make_tuple(horizontal_offset, vertical_offset); // Return a tuple of (horizontal_offset, vertical_offset)
     }
     
-    return  std::make_tuple(-1.0, -1.0); // Return (-1, -1) in case estimation failed
+    return  std::make_tuple(-1.0, -1.0); // Return (-1.0, -1.0) in case estimation failed
 }
 
-int main(int argc, char** argv) {
-    // "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/calibration_params.yml"
-    // "/Users/artem/Projects/3DSMC-ARMarker-Voxel-Carving/00_aruco_markers_detection/aruco-markers-detection/input/custom/correct-rotation-2.jpg"
-    string calibration_params = argv[1];
+int main(int argc, char *argv[]) {
     double horizontal_offset, vertical_offset;
-    string input = argv[2];
+    
+    string calibration_params = "./input/calibration_params.yml"; // Calibration parameters file path
+    string input = "./input/marker.jpg"; // Marker image file input path
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(input, calibration_params);
     cout << horizontal_offset << ',' << vertical_offset << endl;
 }
