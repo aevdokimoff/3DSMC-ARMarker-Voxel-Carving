@@ -32,8 +32,8 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         aruco::drawDetectedMarkers(imageCopy, corners, ids); // Draw detected markers in image. Can be further used for debugging purposes
         vector<cv::Vec3d> rvecs, tvecs;
         aruco::estimatePoseSingleMarkers(corners, 0.0975, cameraMatrix, distCoeffs, rvecs, tvecs); // Pose estimation for single markers
-        Vec3d rvec = rvecs[0]; // first element of the array of output rotation vectors of detected markers. Each element in rvecs corresponds to the specific marker
-        Vec3d tvec = tvecs[0]; // first element of the array of output translation vectors of detected markers. Each element in tvecs corresponds to the specific marker
+        Vec3d rvec = rvecs[0]; // first element of the array of output rotation vectors. Each element in rvecs corresponds to the specific marker
+        Vec3d tvec = tvecs[0]; // first element of the array of output translation vectors. Each element in tvecs corresponds to the specific marker
         
         // Source: https://stackoverflow.com/questions/51476702/pose-of-camera-from-the-pose-of-marker
         Mat R;
