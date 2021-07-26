@@ -1,2 +1,3 @@
 x_dist = 62 cm
 z_dist = 48 cm
+x_offset = -57 px

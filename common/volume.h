@@ -11,11 +11,16 @@ typedef unsigned int uint;
 
 using namespace cv;
 
+/**
+ * A class that stores the info about the 3D square point grid.
+ * Constructor takes 2 points: one with the minimal possible coordinates, second one with the maximal,
+ *  and number of spaces between points.
+ */
 class Volume
 {
 public:
     Volume() = default;
-    Volume(const Vec3d& min_, const Vec3d& max_, uint resolution = 10, uint number_of_images = 72);
+    Volume(const Vec3d &min_, const Vec3d &max_, uint resolution);
 
 	//! Computes spacing in x,y,z-directions.
 	void compute_ddx_dddx();

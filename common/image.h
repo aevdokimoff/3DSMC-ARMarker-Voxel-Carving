@@ -7,6 +7,9 @@ struct Pixel {
     u8 b;
 };
 
+/**
+ * Image structure. Has width, height and an array of pixels of size width*height.
+ */
 struct Image {
     s32 width;
     s32 height;
@@ -17,7 +20,22 @@ struct Image {
     }
 };
 
+/**
+ * Loads an image from the png ot jpg file with given path.
+ */
 Image load_image(const char* path);
+
+/**
+ * Creates an empty image of the given size.
+ */
 Image create_black_image(s32 width, s32 height);
+
+/**
+ * Write an image to the png file with given path.
+ */
 void  store_image_as_png(const Image& image, const char* path);
+
+/**
+ * Deletes the image and frees memory used by it
+ */
 void free_image(Image);

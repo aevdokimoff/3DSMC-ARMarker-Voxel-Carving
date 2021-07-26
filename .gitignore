@@ -43,7 +43,7 @@ cmake-build-debug
 *.aux
 *.log
 
-build.sh
+# build.sh
 *.png
 *.PNG
 *.JPG

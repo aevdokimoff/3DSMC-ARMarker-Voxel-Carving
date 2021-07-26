@@ -8,8 +8,15 @@
 
 using namespace cv;
 
+/**
+ * Vertex that is used in the Mesh class.
+ */
 typedef Vec3d Vertex;
 
+/**
+ * A class that defines one triangle of a mesh. Contains 3 values --
+ *      indices of the corresponding vertices in the clockwise order.
+ */
 struct MeshTriangle
 {
     unsigned int idx0;
@@ -20,6 +27,9 @@ struct MeshTriangle
     {}
 };
 
+/**
+ * Class for storing and accessing a mesh structure and writing it to the off file.
+ */
 class SimpleMesh
 {
 public:

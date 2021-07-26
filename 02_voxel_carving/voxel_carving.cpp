@@ -1,11 +1,8 @@
 #include <cstdio>
 #include <omp.h>
-#include <mutex>
 #include "voxel_carving.hpp"
 #include "common.h"
 #include "image.h"
-
-std::mutex mutex;
 
 Volume generate_point_cloud(u32 resolution, f32 side_length)
 {
@@ -19,7 +16,7 @@ Volume generate_point_cloud(u32 resolution, f32 side_length)
 
 void carve_using_singe_image(Volume *volume, const char* image_path, uint ind,
                              const Matx44d &view_mat, const Matx44d &proj_mat,
-                             bool output_result_image) {
+                             s32 horiz_pixel_offset, bool output_result_image) {
     Image image = load_image(image_path);
     Image output_image{};
 
@@ -33,7 +30,14 @@ void carve_using_singe_image(Volume *volume, const char* image_path, uint ind,
 
                 Vec2d p = project_point_to_screen_space(volume->pos(x, y, z), view_mat, proj_mat);
 
-                int p_x = (p[0] + 1.) / 2. * image.width;
+                if (p[0] < -1 || p[0] > 1 ||
+                    p[1] < -1 || p[1] > 1)
+                {
+                    volume->set(x, y, z, volume->get(x, y, z) + 1);
+                    continue;
+                }
+
+                int p_x = (p[0] + 1.) / 2. * image.width - horiz_pixel_offset;
                 int p_y = (p[1] + 1.) / 2. * image.height;
 
                 bool outside = image.at(p_x, p_y).r < 150;
@@ -70,9 +74,9 @@ void carve_using_singe_image(Volume *volume, const char* image_path, uint ind,
 }
 
 void process_using_single_run(const char* run_path, Matx44d projection_mat,
-                              bool carve_in_parallel, const std::function<void (const char*, uint, Matx44d, Matx44d)> &onProcess)
+                              bool carve_in_parallel, const std::function<void (const char*, uint, Matx44d, Matx44d, s32)> &onProcess)
 {
-    Vec3d cam_pos = get_cam_pos_for_run(run_path);
+    Cam_Info cam_info = get_cam_info_for_run(run_path);
     u32 thread_count = (carve_in_parallel) ? omp_get_max_threads() : 1;
 
     #pragma omp parallel for num_threads(thread_count)
@@ -82,11 +86,11 @@ void process_using_single_run(const char* run_path, Matx44d projection_mat,
         printf("\r %03d deg", degrees);
         fflush(stdout);
 
-        Matx44d view_mat = generate_view_mat(cam_pos[0], cam_pos[2], degrees);
+        Matx44d view_mat = generate_view_mat(cam_info.camera_position[0], cam_info.camera_position[2], degrees);
 
         char image_path[1024];
         sprintf(image_path, "%s/bw/%03d.jpg", run_path, degrees);
-        onProcess(image_path, degrees_it, view_mat, projection_mat);
+        onProcess(image_path, degrees_it, view_mat, projection_mat, cam_info.horiz_pixel_offset);
     }
     printf("\rDone processing run %s\n", run_path);
 }
@@ -101,8 +105,11 @@ void voxel_carve(Volume *volume, const char *path_to_runs, bool carve_in_paralle
     printf("Progress in runs:\n");
     fflush(stdout);
 
-    auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat, Matx44d projection_mat) {
-        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat, output_result_image);
+    auto voxel_carve = [&](const char* file_path, uint ind, Matx44d view_mat,
+                           Matx44d projection_mat, s32 horiz_pixel_offset)
+    {
+        carve_using_singe_image(volume, file_path, ind, view_mat, projection_mat,
+                                horiz_pixel_offset, output_result_image);
     };
 
     sprintf(file_path1, "%s/run_1", path_to_runs);
