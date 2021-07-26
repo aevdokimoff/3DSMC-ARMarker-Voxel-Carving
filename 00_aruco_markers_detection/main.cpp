@@ -49,9 +49,8 @@ tuple<double, double> horizontalVerticalOffset(string image_path, string calibra
         
 #if DRAW_AXES
         // Axes representing the marker's coordinate system can visualized for debugging purposes
-        // Draw axis for the first detected marker.
-        aruco::drawAxis(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1);
-        imshow("Display window", imageCopy);
+        aruco::drawAxis(imageCopy, cameraMatrix, distCoeffs, rvec, tvec, 0.1); // Draw axes of the detected marker
+        imshow("", imageCopy);
         int k = waitKey(0);
         if(k == 's') {
             imwrite(image_path, imageCopy);
@@ -70,6 +69,6 @@ int main(int argc, char *argv[]) {
     string calibration_params = "./input/calibration_params.yml"; // Calibration parameters file path
     string input = "./input/marker.jpg"; // Marker image file input path
     tie(horizontal_offset, vertical_offset) = horizontalVerticalOffset(input, calibration_params);
-    cout << horizontal_offset << ',' << vertical_offset << endl;
+    cout << horizontal_offset << ', ' << vertical_offset << endl;
 }
 
